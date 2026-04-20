@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Admission Prediction — Smart College System{% endblock %}
+{% block page_title %}AI Admission Prediction{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="fas fa-chart-line me-2" style="color: var(--accent);"></i>Admission Trend Prediction</h2>
+</div>
+
+<!-- Prediction Form -->
+<div class="card mb-4">
+    <div class="card-header"><i class="fas fa-brain me-2" style="color: var(--accent);"></i>Generate Prediction</div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('predictions.admission_prediction') }}" id="admissionForm">
+            <div class="d-flex flex-wrap gap-3 align-items-end">
+                <div style="flex:1; min-width:150px;">
+                    <label class="form-label">Target Year</label>
+                    <input type="number" class="form-control" name="year" value="2027" min="2025" max="2035" required>
+                </div>
+                <div style="flex:1; min-width:150px;">
+                    <label class="form-label">Department</label>
+                    <select class="form-select" name="department" required>
+                        <option value="">Select</option>
+                        {% for dept in departments %}
+                        <option value="{{ dept }}">{{ dept }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="flex:1; min-width:150px;">
+                    <label class="form-label">Expected Applications</label>
+                    <input type="number" class="form-control" name="applications" value="150" min="1" max="1000" required>
+                </div>
+                <div>
+                    <button type="submit" class="btn btn-primary" id="predictBtn" onclick="showLoading('predictBtn')">
+                        <i class="fas fa-brain"></i> Predict
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Prediction Result -->
+{% if prediction_result %}
+<div class="prediction-grid mb-4">
+    <div class="prediction-card">
+        <div class="prediction-value">{{ prediction_result.predicted_admissions }}</div>
+        <div class="prediction-label">Predicted Admissions</div>
+    </div>
+    <div class="prediction-card">
+        <div class="prediction-value" style="font-size: 1.8rem;">{{ prediction_result.department }}</div>
+        <div class="prediction-label">Department</div>
+    </div>
+    <div class="prediction-card">
+        <div class="prediction-value">{{ prediction_result.year }}</div>
+        <div class="prediction-label">Target Year</div>
+    </div>
+    <div class="prediction-card">
+        <div class="prediction-value">{{ prediction_result.confidence }}%</div>
+        <div class="prediction-label">Confidence Score</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width: {{ prediction_result.confidence }}%;"></div></div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Historical Trends Chart -->
+<div class="chart-container">
+    <h5><i class="fas fa-chart-line"></i> Historical Admission Trends</h5>
+    <div style="height: 350px;"><canvas id="admissionTrendChart"></canvas></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    fetchJSON('/api/admission-trends').then(function(data) {
+        if (data && data.labels.length > 0) {
+            createLineChart('admissionTrendChart', data.labels, [
+                {
+                    label: 'Applications Received',
+                    data: data.applications,
+                    borderColor: chartColors.primary,
+                    backgroundColor: chartColors.primaryLight,
+                    fill: true, tension: 0.4, pointRadius: 4
+                },
+                {
+                    label: 'Students Admitted',
+                    data: data.admitted,
+                    borderColor: chartColors.success,
+                    backgroundColor: chartColors.successLight,
+                    fill: true, tension: 0.4, pointRadius: 4
+                },
+                {
+                    label: 'Total Capacity',
+                    data: data.capacity,
+                    borderColor: chartColors.warning,
+                    borderDash: [5, 5],
+                    fill: false, tension: 0, pointRadius: 2
+                }
+            ]);
+        }
+    });
+
+    {% if prediction_result %}
+    // Animate prediction cards
+    document.querySelectorAll('.prediction-card').forEach(function(card, i) {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        setTimeout(function() {
+            card.style.transition = 'all 0.5s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, i * 150);
+    });
+    {% endif %}
+});
+</script>
+{% endblock %}

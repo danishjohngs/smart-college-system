@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Prediction History — Smart College System{% endblock %}
+{% block page_title %}Prediction History{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="fas fa-history me-2" style="color: var(--accent);"></i>Prediction History</h2>
+</div>
+
+<form class="filter-bar" method="GET" action="{{ url_for('predictions.prediction_results') }}">
+    <div class="form-group">
+        <label>Type</label>
+        <select class="form-select form-select-sm" name="type" onchange="this.form.submit()">
+            <option value="">All Types</option>
+            <option value="admission" {% if selected_type == 'admission' %}selected{% endif %}>Admission</option>
+            <option value="performance" {% if selected_type == 'performance' %}selected{% endif %}>Performance</option>
+        </select>
+    </div>
+</form>
+
+<div class="table-container">
+    {% if predictions %}
+    <table class="table data-table">
+        <thead>
+            <tr><th>#</th><th>Type</th><th>Student / Dept</th><th>Predicted Value</th><th>Confidence</th><th>Date</th></tr>
+        </thead>
+        <tbody>
+            {% for pred in predictions %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>
+                    <span class="badge-status {% if pred.prediction_type == 'admission' %}badge-graduated{% else %}badge-active{% endif %}">
+                        {{ pred.prediction_type|capitalize }}
+                    </span>
+                </td>
+                <td>
+                    {% if pred.student %}{{ pred.student.name }}{% endif %}
+                    {% if pred.department %}{{ pred.department }}{% endif %}
+                </td>
+                <td>
+                    {% if pred.prediction_type == 'performance' %}
+                        {% if pred.predicted_value == 0 %}<span class="badge-status badge-at-risk">At Risk</span>
+                        {% elif pred.predicted_value == 1 %}<span class="badge-status badge-average">Average</span>
+                        {% elif pred.predicted_value == 2 %}<span class="badge-status badge-good">Good</span>
+                        {% else %}<span class="badge-status badge-excellent">Excellent</span>{% endif %}
+                    {% else %}
+                        <strong>{{ pred.predicted_value|round(0)|int }}</strong> admissions
+                    {% endif %}
+                </td>
+                <td>{{ (pred.confidence * 100)|round(1) }}%</td>
+                <td>{{ pred.created_at.strftime('%d %b %Y %H:%M') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><i class="fas fa-history"></i><h5>No predictions yet</h5><p>Run admission or performance predictions to see history.</p></div>
+    {% endif %}
+</div>
+{% endblock %}

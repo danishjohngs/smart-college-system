@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Login — Smart College System{% endblock %}
+
+{% block auth_content %}
+<div class="auth-card">
+    <div class="auth-logo">
+        <i class="fas fa-graduation-cap"></i>
+        <h2>Smart College System</h2>
+        <p>AI-Powered College Management</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('auth.login') }}" id="loginForm">
+        <div class="mb-3">
+            <label class="form-label" for="username">Username</label>
+            <input type="text" class="form-control" id="username" name="username"
+                   placeholder="Enter your username" required autofocus>
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="password">Password</label>
+            <input type="password" class="form-control" id="password" name="password"
+                   placeholder="Enter your password" required>
+        </div>
+        <button type="submit" class="btn btn-primary" id="loginBtn">
+            <i class="fas fa-sign-in-alt"></i> Sign In
+        </button>
+    </form>
+</div>
+{% endblock %}

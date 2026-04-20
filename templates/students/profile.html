@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}{{ student.name }} — Student Profile{% endblock %}
+{% block page_title %}Student Profile{% endblock %}
+
+{% block content %}
+<!-- Profile Header Card -->
+<div class="card mb-4">
+    <div class="profile-header">
+        <div class="profile-avatar"><i class="fas fa-user-graduate"></i></div>
+        <div class="profile-info">
+            <h3>{{ student.name }}</h3>
+            <p>{{ student.department }} | Semester {{ student.semester }} |
+               <span class="badge-status badge-{{ student.status }}">{{ student.status|capitalize }}</span></p>
+            <div class="profile-meta">
+                <span><i class="fas fa-id-card"></i> {{ student.roll_number }}</span>
+                <span><i class="fas fa-envelope"></i> {{ student.email or 'N/A' }}</span>
+                <span><i class="fas fa-phone"></i> {{ student.phone or 'N/A' }}</span>
+                <span><i class="fas fa-calendar"></i> Admitted {{ student.admission_year or 'N/A' }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="profile-body">
+        <div class="stats-grid">
+            <div class="stat-card green">
+                <div class="stat-icon green"><i class="fas fa-star"></i></div>
+                <div class="stat-info"><h3>{{ student.cgpa }}</h3><p>CGPA</p></div>
+            </div>
+            <div class="stat-card blue">
+                <div class="stat-icon blue"><i class="fas fa-clipboard-check"></i></div>
+                <div class="stat-info"><h3>{{ attendance_pct }}%</h3><p>Attendance</p></div>
+            </div>
+            <div class="stat-card yellow">
+                <div class="stat-icon yellow"><i class="fas fa-book"></i></div>
+                <div class="stat-info"><h3>{{ grades|length }}</h3><p>Courses Graded</p></div>
+            </div>
+        </div>
+
+        {% if current_user.is_admin() or current_user.is_faculty() %}
+        <div class="d-flex gap-2 mb-4">
+            <a href="{{ url_for('students.edit_student', id=student.id) }}" class="btn btn-primary btn-sm"><i class="fas fa-edit"></i> Edit</a>
+            <a href="{{ url_for('grades.view_grades', student_id=student.id) }}" class="btn btn-outline-primary btn-sm"><i class="fas fa-chart-bar"></i> View Grades</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Course-wise Attendance -->
+{% if course_attendance %}
+<div class="card mb-4">
+    <div class="card-header"><i class="fas fa-clipboard-check me-2" style="color: var(--accent);"></i>Course-wise Attendance</div>
+    <div class="card-body">
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr><th>Course</th><th>Total Classes</th><th>Present</th><th>Percentage</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                    {% for cid, data in course_attendance.items() %}
+                    <tr>
+                        <td>{{ data.course.code }} — {{ data.course.name }}</td>
+                        <td>{{ data.total }}</td>
+                        <td>{{ data.present }}</td>
+                        <td><strong>{{ data.percentage }}%</strong></td>
+                        <td>
+                            {% if data.percentage < 75 %}
+                            <span class="badge-status badge-absent">At Risk</span>
+                            {% else %}
+                            <span class="badge-status badge-present">OK</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div style="height: 250px; margin-top: 1rem;">
+            <canvas id="attendanceChart"></canvas>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Grades -->
+{% if grades %}
+<div class="card mb-4">
+    <div class="card-header"><i class="fas fa-chart-bar me-2" style="color: var(--accent);"></i>Academic Grades</div>
+    <div class="card-body">
+        <div class="table-container">
+            <table class="table">
+                <thead><tr><th>Course</th><th>Semester</th><th>Internal</th><th>External</th><th>Total</th><th>Grade</th><th>GP</th></tr></thead>
+                <tbody>
+                    {% for g in grades %}
+                    <tr>
+                        <td>{{ g.course.code }} — {{ g.course.name }}</td>
+                        <td>{{ g.semester }}</td>
+                        <td>{{ g.internal_marks }}</td>
+                        <td>{{ g.external_marks }}</td>
+                        <td><strong>{{ g.total_marks }}</strong></td>
+                        <td><span class="badge-status badge-{% if g.grade in ['A+','A'] %}active{% elif g.grade == 'F' %}inactive{% else %}graduated{% endif %}">{{ g.grade }}</span></td>
+                        <td>{{ g.grade_point }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- AI Predictions -->
+{% if predictions %}
+<div class="card">
+    <div class="card-header"><i class="fas fa-brain me-2" style="color: var(--accent);"></i>AI Performance Predictions</div>
+    <div class="card-body">
+        <div class="prediction-grid">
+            {% for pred in predictions %}
+            <div class="prediction-card">
+                <div class="prediction-value">
+                    {% if pred.predicted_value == 0 %}<span style="color:var(--danger);">At Risk</span>
+                    {% elif pred.predicted_value == 1 %}<span style="color:var(--warning);">Average</span>
+                    {% elif pred.predicted_value == 2 %}<span style="color:var(--success);">Good</span>
+                    {% else %}<span style="color:var(--accent);">Excellent</span>{% endif %}
+                </div>
+                <div class="prediction-label">{{ pred.created_at.strftime('%d %b %Y') }}</div>
+                <div class="confidence-bar"><div class="confidence-fill" style="width: {{ (pred.confidence * 100)|round }}%;"></div></div>
+                <small class="text-muted">{{ (pred.confidence * 100)|round(1) }}% confidence</small>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    fetchJSON('/api/attendance-chart/{{ student.id }}').then(function(data) {
+        if (data && data.labels.length > 0) {
+            createBarChart('attendanceChart', data.labels, [
+                { label: 'Present', data: data.present, backgroundColor: chartColors.success, borderRadius: 4 },
+                { label: 'Absent', data: data.absent, backgroundColor: chartColors.danger, borderRadius: 4 },
+                { label: 'Late', data: data.late, backgroundColor: chartColors.warning, borderRadius: 4 }
+            ], { scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } });
+        }
+    });
+});
+</script>
+{% endblock %}

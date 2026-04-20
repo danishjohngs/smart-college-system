@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard — Smart College System{% endblock %}
+{% block page_title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<!-- Stats Cards -->
+<div class="stats-grid">
+    <div class="stat-card blue">
+        <div class="stat-icon blue"><i class="fas fa-user-graduate"></i></div>
+        <div class="stat-info">
+            <h3>{{ total_students }}</h3>
+            <p>Total Students</p>
+        </div>
+    </div>
+    <div class="stat-card green">
+        <div class="stat-icon green"><i class="fas fa-chalkboard-teacher"></i></div>
+        <div class="stat-info">
+            <h3>{{ total_faculty }}</h3>
+            <p>Faculty Members</p>
+        </div>
+    </div>
+    <div class="stat-card yellow">
+        <div class="stat-icon yellow"><i class="fas fa-book"></i></div>
+        <div class="stat-info">
+            <h3>{{ total_courses }}</h3>
+            <p>Active Courses</p>
+        </div>
+    </div>
+    <div class="stat-card cyan">
+        <div class="stat-icon cyan"><i class="fas fa-clipboard-check"></i></div>
+        <div class="stat-info">
+            <h3>{{ attendance_rate }}%</h3>
+            <p>Attendance Rate</p>
+        </div>
+    </div>
+</div>
+
+<!-- At-Risk Alert -->
+{% if at_risk_count > 0 %}
+<div class="at-risk-banner">
+    <i class="fas fa-exclamation-triangle"></i>
+    <div>
+        <span class="count">{{ at_risk_count }}</span>
+        <p>students are predicted as "At Risk" by the AI model.
+           <a href="{{ url_for('predictions.performance_prediction') }}">View Details →</a>
+        </p>
+    </div>
+</div>
+{% endif %}
+
+<!-- Charts -->
+<div class="charts-grid">
+    <div class="chart-container">
+        <h5><i class="fas fa-chart-bar"></i> Students by Department</h5>
+        <div style="height: 300px;">
+            <canvas id="deptChart"></canvas>
+        </div>
+    </div>
+    <div class="chart-container">
+        <h5><i class="fas fa-chart-pie"></i> Attendance Overview</h5>
+        <div style="height: 300px;">
+            <canvas id="attendanceChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="charts-grid">
+    <div class="chart-container">
+        <h5><i class="fas fa-chart-line"></i> Admission Trends</h5>
+        <div style="height: 300px;">
+            <canvas id="admissionChart"></canvas>
+        </div>
+    </div>
+    <div class="chart-container">
+        <h5><i class="fas fa-chart-pie"></i> Grade Distribution</h5>
+        <div style="height: 300px;">
+            <canvas id="gradeChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="card">
+    <div class="card-header"><i class="fas fa-bolt me-2" style="color: var(--accent);"></i>Quick Actions</div>
+    <div class="card-body">
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ url_for('students.add_student') }}" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Add Student</a>
+            <a href="{{ url_for('faculty.add_faculty') }}" class="btn btn-success btn-sm"><i class="fas fa-plus"></i> Add Faculty</a>
+            <a href="{{ url_for('courses.add_course') }}" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Add Course</a>
+            <a href="{{ url_for('attendance.mark_attendance') }}" class="btn btn-outline-primary btn-sm"><i class="fas fa-clipboard-check"></i> Mark Attendance</a>
+            <a href="{{ url_for('grades.manage_grades') }}" class="btn btn-outline-primary btn-sm"><i class="fas fa-chart-bar"></i> Manage Grades</a>
+            <a href="{{ url_for('predictions.admission_prediction') }}" class="btn btn-outline-primary btn-sm"><i class="fas fa-brain"></i> AI Predictions</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Department Chart
+    const deptData = {{ dept_counts | tojson }};
+    createBarChart('deptChart',
+        Object.keys(deptData),
+        [{
+            label: 'Students',
+            data: Object.values(deptData),
+            backgroundColor: chartPalette,
+            borderRadius: 6,
+            borderSkipped: false
+        }]
+    );
+
+    // Attendance Pie Chart
+    fetchJSON('/api/dashboard-stats').then(function(data) {
+        if (data) {
+            const present = data.attendance_rate;
+            const absent = 100 - present;
+            createPieChart('attendanceChart',
+                ['Present', 'Absent/Late'],
+                [present, absent]
+            );
+        }
+    });
+
+    // Admission Trends
+    fetchJSON('/api/admission-trends').then(function(data) {
+        if (data) {
+            createLineChart('admissionChart',
+                data.labels,
+                [
+                    {
+                        label: 'Applications',
+                        data: data.applications,
+                        borderColor: chartColors.primary,
+                        backgroundColor: chartColors.primaryLight,
+                        fill: true,
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Admitted',
+                        data: data.admitted,
+                        borderColor: chartColors.success,
+                        backgroundColor: chartColors.successLight,
+                        fill: true,
+                        tension: 0.4
+                    }
+                ]
+            );
+        }
+    });
+
+    // Grade Distribution
+    fetchJSON('/api/grade-distribution').then(function(data) {
+        if (data) {
+            createPieChart('gradeChart', data.labels, data.data);
+        }
+    });
+});
+</script>
+{% endblock %}

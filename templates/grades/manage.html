@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Manage Grades — Smart College System{% endblock %}
+{% block page_title %}Grade Management{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="fas fa-chart-bar me-2" style="color: var(--accent);"></i>Manage Grades</h2>
+    <a href="{{ url_for('grades.grade_report') }}" class="btn btn-outline-primary btn-sm"><i class="fas fa-file-alt"></i> View Reports</a>
+</div>
+
+<!-- Course Selection -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('grades.manage_grades') }}" class="d-flex gap-3 align-items-end">
+            <div style="flex:1;">
+                <label class="form-label">Select Course</label>
+                <select class="form-select" name="course_id" onchange="this.form.submit()">
+                    <option value="">-- Choose Course --</option>
+                    {% for course in courses %}
+                    <option value="{{ course.id }}" {% if selected_course_id == course.id|string %}selected{% endif %}>
+                        {{ course.code }} — {{ course.name }} (Sem {{ course.semester }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if students %}
+<form method="POST" action="{{ url_for('grades.manage_grades') }}">
+    <input type="hidden" name="course_id" value="{{ selected_course_id }}">
+
+    <div class="table-container mb-3">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>#</th><th>Roll No</th><th>Student Name</th>
+                    <th>Internal Marks (0-50)</th><th>External Marks (0-50)</th>
+                    <th>Current Grade</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in students %}
+                {% set grade = existing_grades.get(student.id) %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td><strong>{{ student.roll_number }}</strong></td>
+                    <td>{{ student.name }}</td>
+                    <td>
+                        <input type="number" class="form-control form-control-sm" name="internal_{{ student.id }}"
+                               value="{{ grade.internal_marks if grade else '' }}" min="0" max="50" step="0.5"
+                               style="width: 100px;">
+                    </td>
+                    <td>
+                        <input type="number" class="form-control form-control-sm" name="external_{{ student.id }}"
+                               value="{{ grade.external_marks if grade else '' }}" min="0" max="50" step="0.5"
+                               style="width: 100px;">
+                    </td>
+                    <td>
+                        {% if grade %}
+                        <span class="badge-status badge-{% if grade.grade in ['A+','A'] %}active{% elif grade.grade == 'F' %}inactive{% else %}graduated{% endif %}">
+                            {{ grade.grade }} ({{ grade.total_marks }})
+                        </span>
+                        {% else %}
+                        <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Grades</button>
+</form>
+{% elif selected_course_id %}
+<div class="empty-state"><i class="fas fa-chart-bar"></i><h5>No students in this course</h5></div>
+{% endif %}
+{% endblock %}

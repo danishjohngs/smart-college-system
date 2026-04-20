@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Edit Student — Smart College System{% endblock %}
+{% block page_title %}Edit Student{% endblock %}
+
+{% block content %}
+<div class="form-card">
+    <h3><i class="fas fa-edit me-2" style="color: var(--accent);"></i>Edit Student — {{ student.name }}</h3>
+
+    <form method="POST" action="{{ url_for('students.edit_student', id=student.id) }}">
+        <div class="form-row mb-3">
+            <div>
+                <label class="form-label" for="name">Full Name *</label>
+                <input type="text" class="form-control" id="name" name="name" value="{{ student.name }}" required>
+            </div>
+            <div>
+                <label class="form-label" for="roll_number">Roll Number *</label>
+                <input type="text" class="form-control" id="roll_number" name="roll_number" value="{{ student.roll_number }}" required>
+            </div>
+        </div>
+
+        <div class="form-row mb-3">
+            <div>
+                <label class="form-label" for="email">Email</label>
+                <input type="email" class="form-control" id="email" name="email" value="{{ student.email or '' }}">
+            </div>
+            <div>
+                <label class="form-label" for="phone">Phone</label>
+                <input type="text" class="form-control" id="phone" name="phone" value="{{ student.phone or '' }}">
+            </div>
+        </div>
+
+        <div class="form-row mb-3">
+            <div>
+                <label class="form-label" for="department">Department *</label>
+                <select class="form-select" id="department" name="department" required>
+                    {% for dept in departments %}
+                    <option value="{{ dept }}" {% if student.department == dept %}selected{% endif %}>{{ dept }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="form-label" for="semester">Semester *</label>
+                <select class="form-select" id="semester" name="semester" required>
+                    {% for s in range(1, 9) %}
+                    <option value="{{ s }}" {% if student.semester == s %}selected{% endif %}>Semester {{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row mb-3">
+            <div>
+                <label class="form-label" for="date_of_birth">Date of Birth</label>
+                <input type="date" class="form-control" id="date_of_birth" name="date_of_birth"
+                       value="{{ student.date_of_birth.strftime('%Y-%m-%d') if student.date_of_birth else '' }}">
+            </div>
+            <div>
+                <label class="form-label" for="gender">Gender</label>
+                <select class="form-select" id="gender" name="gender">
+                    <option value="">Select</option>
+                    <option value="Male" {% if student.gender == 'Male' %}selected{% endif %}>Male</option>
+                    <option value="Female" {% if student.gender == 'Female' %}selected{% endif %}>Female</option>
+                    <option value="Other" {% if student.gender == 'Other' %}selected{% endif %}>Other</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row mb-3">
+            <div>
+                <label class="form-label" for="status">Status</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="active" {% if student.status == 'active' %}selected{% endif %}>Active</option>
+                    <option value="inactive" {% if student.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                    <option value="graduated" {% if student.status == 'graduated' %}selected{% endif %}>Graduated</option>
+                </select>
+            </div>
+            <div></div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label" for="address">Address</label>
+            <textarea class="form-control" id="address" name="address" rows="2">{{ student.address or '' }}</textarea>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Update Student</button>
+            <a href="{{ url_for('students.profile', id=student.id) }}" class="btn btn-outline-primary"><i class="fas fa-arrow-left"></i> Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

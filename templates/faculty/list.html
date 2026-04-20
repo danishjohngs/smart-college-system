@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Faculty — Smart College System{% endblock %}
+{% block page_title %}Faculty Management{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="fas fa-chalkboard-teacher me-2" style="color: var(--accent);"></i>Faculty</h2>
+    {% if current_user.is_admin() %}
+    <a href="{{ url_for('faculty.add_faculty') }}" class="btn btn-primary"><i class="fas fa-plus"></i> Add Faculty</a>
+    {% endif %}
+</div>
+
+<form class="filter-bar" method="GET" action="{{ url_for('faculty.list_faculty') }}">
+    <div class="form-group">
+        <label>Search</label>
+        <input type="text" class="form-control form-control-sm" name="search" value="{{ filters.search }}" placeholder="Name, ID, Email...">
+    </div>
+    <div class="form-group">
+        <label>Department</label>
+        <select class="form-select form-select-sm" name="department">
+            <option value="">All Departments</option>
+            {% for dept in departments %}
+            <option value="{{ dept }}" {% if filters.department == dept %}selected{% endif %}>{{ dept }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i> Filter</button>
+    <a href="{{ url_for('faculty.list_faculty') }}" class="btn btn-outline-primary btn-sm"><i class="fas fa-times"></i> Clear</a>
+</form>
+
+<div class="table-container">
+    {% if faculty_list %}
+    <table class="table data-table">
+        <thead>
+            <tr><th>#</th><th>Employee ID</th><th>Name</th><th>Department</th><th>Designation</th><th>Email</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+            {% for fac in faculty_list %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td><strong>{{ fac.employee_id }}</strong></td>
+                <td>{{ fac.name }}</td>
+                <td>{{ fac.department }}</td>
+                <td>{{ fac.designation or 'N/A' }}</td>
+                <td>{{ fac.email or 'N/A' }}</td>
+                <td>
+                    <div class="action-btns">
+                        {% if current_user.is_admin() %}
+                        <a href="{{ url_for('faculty.edit_faculty', id=fac.id) }}" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i></a>
+                        <form method="POST" action="{{ url_for('faculty.delete_faculty', id=fac.id) }}" style="display:inline;" id="delFac{{ fac.id }}">
+                            <button type="button" class="btn btn-sm btn-danger" onclick="confirmDelete('{{ fac.name }}', 'delFac{{ fac.id }}')"><i class="fas fa-trash"></i></button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><i class="fas fa-chalkboard-teacher"></i><h5>No faculty found</h5></div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Attendance Report — Smart College System{% endblock %}
+{% block page_title %}Attendance Report{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="fas fa-chart-bar me-2" style="color: var(--accent);"></i>Attendance Report</h2>
+</div>
+
+<form class="filter-bar" method="GET" action="{{ url_for('attendance.attendance_report') }}">
+    <div class="form-group" style="flex:2;">
+        <label>Select Course</label>
+        <select class="form-select form-select-sm" name="course_id" onchange="this.form.submit()">
+            <option value="">-- Choose Course --</option>
+            {% for course in courses %}
+            <option value="{{ course.id }}" {% if selected_course_id == course.id|string %}selected{% endif %}>{{ course.code }} — {{ course.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</form>
+
+{% if report_data %}
+<div class="table-container mb-4">
+    <table class="table data-table">
+        <thead>
+            <tr><th>#</th><th>Student</th><th>Roll No</th><th>Total</th><th>Present</th><th>Late</th><th>Absent</th><th>Percentage</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+            {% for item in report_data %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ item.student.name }}</td>
+                <td>{{ item.student.roll_number }}</td>
+                <td>{{ item.total }}</td>
+                <td><span style="color: var(--success); font-weight: 600;">{{ item.present }}</span></td>
+                <td><span style="color: var(--warning); font-weight: 600;">{{ item.late }}</span></td>
+                <td><span style="color: var(--danger); font-weight: 600;">{{ item.absent }}</span></td>
+                <td>
+                    <strong {% if item.at_risk %}style="color: var(--danger);"{% else %}style="color: var(--success);"{% endif %}>
+                        {{ item.percentage }}%
+                    </strong>
+                </td>
+                <td>
+                    {% if item.at_risk %}
+                    <span class="badge-status badge-absent"><i class="fas fa-exclamation-triangle"></i> Below 75%</span>
+                    {% else %}
+                    <span class="badge-status badge-present">OK</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Attendance Chart -->
+<div class="chart-container">
+    <h5><i class="fas fa-chart-bar"></i> Attendance Distribution</h5>
+    <div style="height: 300px;"><canvas id="reportChart"></canvas></div>
+</div>
+{% elif selected_course_id %}
+<div class="empty-state"><i class="fas fa-chart-bar"></i><h5>No attendance data</h5></div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if report_data %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const labels = [{% for item in report_data %}'{{ item.student.roll_number }}'{% if not loop.last %},{% endif %}{% endfor %}];
+    const percentages = [{% for item in report_data %}{{ item.percentage }}{% if not loop.last %},{% endif %}{% endfor %}];
+    const colors = percentages.map(p => p < 75 ? chartColors.danger : chartColors.success);
+
+    createBarChart('reportChart', labels, [{
+        label: 'Attendance %',
+        data: percentages,
+        backgroundColor: colors,
+        borderRadius: 4,
+        borderSkipped: false
+    }], {
+        plugins: {
+            legend: { display: false },
+            annotation: {
+                annotations: {
+                    line1: { type: 'line', yMin: 75, yMax: 75, borderColor: chartColors.danger, borderDash: [5, 5], borderWidth: 2 }
+                }
+            }
+        },
+        scales: { y: { beginAtZero: true, max: 100 } }
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

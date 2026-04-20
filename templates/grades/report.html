@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Grade Report — Smart College System{% endblock %}
+{% block page_title %}Grade Report{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="fas fa-file-alt me-2" style="color: var(--accent);"></i>Grade Report</h2>
+</div>
+
+<form class="filter-bar" method="GET" action="{{ url_for('grades.grade_report') }}">
+    <div class="form-group" style="flex:2;">
+        <label>Department</label>
+        <select class="form-select form-select-sm" name="department" onchange="this.form.submit()">
+            <option value="">Overall Distribution</option>
+            {% for dept in departments %}
+            <option value="{{ dept }}" {% if selected_dept == dept %}selected{% endif %}>{{ dept }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</form>
+
+<!-- Grade Distribution Chart -->
+<div class="chart-container mb-4">
+    <h5><i class="fas fa-chart-pie"></i> Grade Distribution {% if selected_dept %}— {{ selected_dept }}{% endif %}</h5>
+    <div style="height: 300px;"><canvas id="gradeDistChart"></canvas></div>
+</div>
+
+{% if report_data %}
+<div class="table-container">
+    <table class="table data-table">
+        <thead><tr><th>#</th><th>Student</th><th>Roll No</th><th>Courses Graded</th><th>CGPA</th></tr></thead>
+        <tbody>
+            {% for item in report_data %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td><a href="{{ url_for('grades.view_grades', student_id=item.student.id) }}">{{ item.student.name }}</a></td>
+                <td>{{ item.student.roll_number }}</td>
+                <td>{{ item.total_grades }}</td>
+                <td><strong>{{ item.cgpa }}</strong></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const gradeDist = {{ grade_dist | tojson }};
+    createPieChart('gradeDistChart', Object.keys(gradeDist), Object.values(gradeDist));
+});
+</script>
+{% endblock %}

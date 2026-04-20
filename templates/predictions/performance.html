@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Performance Prediction — Smart College System{% endblock %}
+{% block page_title %}AI Performance Prediction{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="fas fa-brain me-2" style="color: var(--accent);"></i>Student Performance Prediction</h2>
+</div>
+
+<!-- Single Student Prediction -->
+<div class="card mb-4">
+    <div class="card-header"><i class="fas fa-user-graduate me-2" style="color: var(--accent);"></i>Individual Prediction</div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('predictions.performance_prediction') }}">
+            <input type="hidden" name="action" value="single">
+            <div class="d-flex flex-wrap gap-3 align-items-end">
+                <div style="flex:2; min-width:200px;">
+                    <label class="form-label">Select Student</label>
+                    <select class="form-select" name="student_id" required>
+                        <option value="">-- Choose Student --</option>
+                        {% for s in students %}
+                        <option value="{{ s.id }}">{{ s.roll_number }} — {{ s.name }} ({{ s.department }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-brain"></i> Predict</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Single Result -->
+{% if prediction_result %}
+<div class="card mb-4">
+    <div class="card-header"><i class="fas fa-poll me-2" style="color: var(--accent);"></i>Prediction Result — {{ prediction_result.student.name }}</div>
+    <div class="card-body">
+        <div class="prediction-grid">
+            <div class="prediction-card">
+                <div class="prediction-value">
+                    {% if prediction_result.category == 0 %}<span style="color:var(--danger);">⚠</span>
+                    {% elif prediction_result.category == 1 %}<span style="color:var(--warning);">◆</span>
+                    {% elif prediction_result.category == 2 %}<span style="color:var(--success);">●</span>
+                    {% else %}<span style="color:var(--accent);">★</span>{% endif %}
+                </div>
+                <div class="prediction-label">{{ prediction_result.risk_level }}</div>
+            </div>
+            <div class="prediction-card">
+                <div class="prediction-value">{{ prediction_result.confidence }}%</div>
+                <div class="prediction-label">Confidence</div>
+                <div class="confidence-bar"><div class="confidence-fill" style="width: {{ prediction_result.confidence }}%;"></div></div>
+            </div>
+            <div class="prediction-card">
+                <div class="prediction-value">{{ prediction_result.attendance_pct }}%</div>
+                <div class="prediction-label">Attendance</div>
+            </div>
+            <div class="prediction-card">
+                <div class="prediction-value">{{ prediction_result.past_cgpa }}</div>
+                <div class="prediction-label">CGPA</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Bulk Prediction -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-users me-2" style="color: var(--accent);"></i>Bulk Prediction (All Students)</span>
+        <form method="POST" action="{{ url_for('predictions.performance_prediction') }}" style="display:inline;">
+            <input type="hidden" name="action" value="bulk">
+            <button type="submit" class="btn btn-sm btn-primary"><i class="fas fa-brain"></i> Run Bulk Prediction</button>
+        </form>
+    </div>
+</div>
+
+<!-- Bulk Results -->
+{% if all_predictions %}
+<div class="table-container mb-4">
+    <table class="table data-table">
+        <thead>
+            <tr><th>#</th><th>Student</th><th>Department</th><th>Attendance</th><th>CGPA</th><th>Risk Level</th><th>Confidence</th></tr>
+        </thead>
+        <tbody>
+            {% for p in all_predictions %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td><a href="{{ url_for('students.profile', id=p.student.id) }}">{{ p.student.name }}</a></td>
+                <td>{{ p.student.department }}</td>
+                <td>{{ p.attendance_pct }}%</td>
+                <td>{{ p.past_cgpa }}</td>
+                <td>
+                    <span class="badge-status badge-{% if p.category == 0 %}at-risk{% elif p.category == 1 %}average{% elif p.category == 2 %}good{% else %}excellent{% endif %}">
+                        {{ p.risk_level }}
+                    </span>
+                </td>
+                <td>{{ p.confidence }}%</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- Smart Alerts: At-Risk Students -->
+{% if at_risk_students %}
+<div class="card">
+    <div class="card-header" style="background: #fef2f2;">
+        <i class="fas fa-exclamation-triangle me-2" style="color: var(--danger);"></i>
+        <strong style="color: #991b1b;">Smart Alert: {{ at_risk_students|length }} At-Risk Students</strong>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-container">
+            <table class="table">
+                <thead><tr><th>Student</th><th>Roll No</th><th>Department</th><th>CGPA</th><th>Action</th></tr></thead>
+                <tbody>
+                    {% for s in at_risk_students %}
+                    <tr style="background: #fff5f5;">
+                        <td><strong>{{ s.name }}</strong></td>
+                        <td>{{ s.roll_number }}</td>
+                        <td>{{ s.department }}</td>
+                        <td><span style="color: var(--danger); font-weight: 700;">{{ s.cgpa }}</span></td>
+                        <td><a href="{{ url_for('students.profile', id=s.id) }}" class="btn btn-sm btn-outline-primary">View Profile</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
