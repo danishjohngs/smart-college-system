@@ -1,17 +1,40 @@
 # Smart College Management System with AI-Based Predictive Analytics
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" />
-  <img src="https://img.shields.io/badge/Flask-2.x-000000?style=for-the-badge&logo=flask&logoColor=white" />
+  <img src="https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white" />
+  <img src="https://img.shields.io/badge/Flask-3.0-000000?style=for-the-badge&logo=flask&logoColor=white" />
   <img src="https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white" />
   <img src="https://img.shields.io/badge/Scikit--Learn-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white" />
   <img src="https://img.shields.io/badge/Chart.js-FF6384?style=for-the-badge&logo=chartdotjs&logoColor=white" />
+  <img src="https://img.shields.io/badge/Render-46E3B7?style=for-the-badge&logo=render&logoColor=white" />
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" />
 </p>
 
 <p align="center">
-  A full-stack college management platform powered by machine learning — featuring admission prediction, student performance analytics, role-based access control, and an interactive admin dashboard.
+  <a href="https://smart-college-system.onrender.com">
+    <img src="https://img.shields.io/badge/🚀_LIVE_DEMO-Click_Here-success?style=for-the-badge" alt="Live Demo" />
+  </a>
 </p>
+
+<p align="center">
+  A full-stack college management platform powered by machine learning — featuring admission trend prediction, student performance analytics, role-based access control, and an interactive admin dashboard.
+</p>
+
+---
+
+## 🌐 Live Demo
+
+**Try it live:** [https://smart-college-system.onrender.com](https://smart-college-system.onrender.com)
+
+> **Note:** The demo is hosted on Render's free tier, which spins down after 15 minutes of inactivity. The first request after a cold start may take ~30 seconds to wake up — subsequent requests are fast.
+
+### Demo Credentials
+
+| Role | Username | Password |
+|---|---|---|
+| **Admin** | `admin` | `admin123` |
+| **Faculty** | `ramesh.kumar` | `faculty123` |
+| **Student** | *(any seeded student)* | `student123` |
 
 ---
 
@@ -23,7 +46,7 @@
 - [Architecture](#architecture)
 - [AI/ML Models](#aiml-models)
 - [Screenshots](#screenshots)
-- [Getting Started](#getting-started)
+- [Getting Started](#getting-started-local-development)
 - [Project Structure](#project-structure)
 - [API Routes](#api-routes)
 - [Deployment](#deployment)
@@ -47,24 +70,27 @@ The system serves three distinct user roles (Admin, Faculty, Student), each with
 | Module | Description |
 |---|---|
 | **Authentication & RBAC** | Role-based login system with session management for Admin, Faculty, and Student roles |
+| **Multi-Tenant Architecture** | Each college gets isolated data, users, and ML models via a college code system |
 | **Student Management** | Full CRUD operations with detailed student profiles and academic history |
 | **Faculty Management** | Admin-controlled faculty records with department associations |
-| **Course Management** | Department-wise course catalog with enrollment tracking |
-| **Attendance Tracking** | Mark, view, and generate attendance reports per course and student |
-| **Grade Management** | Record grades, auto-calculate CGPA, and track academic progression |
-| **Unified Reports** | Consolidated reporting page with exportable attendance, grade, and performance data |
+| **Course Management** | Department-wise course catalog with semester and credit tracking |
+| **Attendance Tracking** | Mark, view, and generate attendance reports with auto-percentage calculation |
+| **Grade Management** | Record grades with auto-calculated CGPA and grade points |
+| **Removal Request Workflow** | Multi-step approval system — faculty request, admin approves, records archived |
+| **Notification System** | Real-time in-app notifications for approvals, alerts, and system events |
+| **Approval System** | Admin approves new faculty/student registrations before granting access |
 
 ### AI-Powered Predictive Analytics
 
-| Model | Input Features | Output |
-|---|---|---|
-| **Admission Predictor** | Entrance exam score, 12th-grade marks, department preference | Admission likelihood (Accept / Reject) with confidence score |
-| **Performance Predictor** | Attendance rate, current grades, historical performance | Risk category: *At Risk · Average · Good · Excellent* |
+| Model | Algorithm | Input Features | Output |
+|---|---|---|---|
+| **Admission Trend Predictor** | Random Forest Regressor | Year, department, expected applications | Predicted intake + confidence score |
+| **Performance Predictor** | Random Forest Classifier | Attendance %, CGPA, internal marks avg | Risk tier: *At Risk · Average · Good · Excellent* |
 
 ### Admin Dashboard
 
-- **Real-time statistics** — student count, faculty count, department-wise enrollment
-- **Interactive Chart.js visualizations** — department distribution, attendance trends, admission rates, grade analytics
+- **Real-time statistics** — student count, faculty count, department-wise distribution
+- **Interactive Chart.js visualizations** — admission trends, attendance patterns, grade distributions
 - **Smart alerts** — automated flags for students classified as "At Risk" by the ML model
 - **Quick-action panels** — direct links to management modules from the dashboard
 
@@ -74,12 +100,13 @@ The system serves three distinct user roles (Admin, Faculty, Student), each with
 
 | Layer | Technology |
 |---|---|
-| **Backend** | Python 3.10+, Flask, Flask-Login |
+| **Backend** | Python 3.11, Flask 3.0, Flask-Login |
 | **ORM & Database** | SQLAlchemy, SQLite |
-| **AI/ML** | Scikit-learn, Pandas, NumPy |
-| **Frontend** | HTML5, CSS3, JavaScript (ES6) |
+| **AI/ML** | Scikit-learn, Pandas, NumPy, Joblib |
+| **Frontend** | HTML5, CSS3, JavaScript (ES6), Bootstrap 5 |
 | **Data Visualization** | Chart.js |
-| **Deployment** | Vercel (serverless) |
+| **Production Server** | Gunicorn |
+| **Deployment** | Render.com (with persistent disk) |
 
 ---
 
@@ -90,27 +117,27 @@ The system serves three distinct user roles (Admin, Faculty, Student), each with
 │                     Client (Browser)                    │
 │              HTML/CSS/JS · Chart.js Dashboards          │
 └──────────────────────────┬──────────────────────────────┘
-                           │ HTTP
+                           │ HTTPS
 ┌──────────────────────────▼──────────────────────────────┐
-│                    Flask Application                    │
+│                Gunicorn + Flask Application             │
 │  ┌──────────┐  ┌──────────────┐  ┌───────────────────┐  │
-│  │  Routes   │  │  Auth (RBAC) │  │  Jinja2 Templates │  │
-│  │ Blueprints│  │  Flask-Login │  │                   │  │
+│  │  Routes  │  │  Auth (RBAC) │  │  Jinja2 Templates │  │
+│  │Blueprints│  │  Flask-Login │  │                   │  │
 │  └─────┬────┘  └──────────────┘  └───────────────────┘  │
 │        │                                                │
 │  ┌─────▼─────────────────────────────────────────────┐  │
 │  │              Business Logic Layer                 │  │
 │  │  ┌─────────────────┐  ┌─────────────────────────┐ │  │
-│  │  │ CRUD Operations │  │   ML Prediction Engine   │ │  │
-│  │  │                 │  │  · Admission Predictor   │ │  │
-│  │  │                 │  │  · Performance Predictor  │ │  │
+│  │  │ CRUD Operations │  │   ML Prediction Engine  │ │  │
+│  │  │ Approval Flows  │  │  · Admission Predictor  │ │  │
+│  │  │ Notifications   │  │  · Performance Predictor│ │  │
 │  │  └────────┬────────┘  └────────────┬────────────┘ │  │
 │  └───────────┼────────────────────────┼──────────────┘  │
 │              │                        │                 │
-│  ┌───────────▼────────┐  ┌────────────▼─────────────┐  │
-│  │  SQLAlchemy ORM    │  │  Scikit-learn (.pkl)     │  │
-│  │  SQLite Database   │  │  Trained Model Files     │  │
-│  └────────────────────┘  └──────────────────────────┘  │
+│  ┌───────────▼────────┐  ┌────────────▼─────────────┐   │
+│  │  SQLAlchemy ORM    │  │  Scikit-learn (.pkl)     │   │
+│  │  SQLite Database   │  │  Per-college Model Files │   │
+│  └────────────────────┘  └──────────────────────────┘   │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -118,55 +145,60 @@ The system serves three distinct user roles (Admin, Faculty, Student), each with
 
 ## AI/ML Models
 
-### Admission Predictor
+### Admission Trend Predictor
 
-Predicts whether a prospective student should be admitted based on academic credentials.
+Predicts future student intake based on 10 years of historical admission data.
 
-- **Algorithm:** Logistic Regression / Random Forest (best selected via cross-validation)
-- **Features:** `entrance_score`, `twelfth_percentage`, `department_id`
-- **Target:** Binary classification (Admit / Reject)
-- **Training:** Synthetic dataset generated from realistic admission criteria
-- **Persistence:** Serialized via `joblib` to `ml/saved_models/`
+- **Algorithm:** Random Forest Regressor
+- **Features:** `year`, `department`, `expected_applications`
+- **Target:** Predicted students admitted (regression)
+- **Output:** Intake prediction with R² confidence score
+- **Optimization:** Single-threaded execution (`n_jobs=1`) for sub-200ms response times in serverless environments
 
 ### Performance Predictor
 
 Classifies enrolled students into performance tiers for early intervention.
 
-- **Algorithm:** Decision Tree / Random Forest Classifier
-- **Features:** `attendance_percentage`, `current_cgpa`, `assignment_scores`
-- **Target:** Multi-class (At Risk / Average / Good / Excellent)
-- **Integration:** Results feed directly into the admin dashboard's smart alert system
+- **Algorithm:** Random Forest Classifier
+- **Features:** `attendance_percentage`, `current_cgpa`, `avg_internal_marks`
+- **Target:** Multi-class — *At Risk · Average · Good · Excellent*
+- **Integration:** Results power the smart alert system on the admin and faculty dashboards
 
-### Training Pipeline
+### Model Persistence Pattern
 
-```bash
-# Retrain models with updated data
-python ml/train_models.py
+Models are trained once during seeding and serialized to disk via `joblib`. The application loads pre-trained `.pkl` files at runtime, eliminating retraining overhead on every request — a critical optimization for production deployment.
+
+```
+ml/saved_models/
+├── admission_model_<college_id>.pkl
+├── admission_encoder_<college_id>.pkl
+└── performance_model_<college_id>.pkl
 ```
 
-Models are versioned in `ml/saved_models/` and loaded at application startup.
+Each college maintains its own isolated model files, supporting the multi-tenant architecture.
 
 ---
 
 ## Screenshots
 
-> *Add screenshots of your application here*
+> *Screenshots coming soon — add yours in the `docs/screenshots/` folder*
 >
-> Suggested screenshots:
-> - Login page
+> Suggested captures:
+> - Login & registration flow
 > - Admin dashboard with charts and smart alerts
-> - Admission prediction form and results
-> - Performance prediction output
-> - Student/Faculty management views
-> - Attendance and grade reports
+> - Admission prediction interface
+> - Performance prediction with risk tiers
+> - Attendance marking & reports
+> - Grade management & CGPA tracking
+> - Removal request approval workflow
 
 ---
 
-## Getting Started
+## Getting Started (Local Development)
 
 ### Prerequisites
 
-- Python 3.10 or higher
+- Python 3.11 or higher
 - pip (Python package manager)
 - Git
 
@@ -185,7 +217,7 @@ source venv/bin/activate        # Linux / macOS
 # Install dependencies
 pip install -r requirements.txt
 
-# Seed the database with sample data
+# Seed the database with sample data (creates 100+ students, 20+ faculty, 17 courses, 10 years of admission history)
 python seed_data.py
 
 # Start the development server
@@ -194,13 +226,13 @@ python app.py
 
 The application will be available at **http://localhost:5000**
 
-### Demo Credentials
+### Default Credentials (after seeding)
 
 | Role | Username | Password |
 |---|---|---|
 | Admin | `admin` | `admin123` |
-| Faculty | `faculty1` | `faculty123` |
-| Student | `student1` | `student123` |
+| Faculty | `ramesh.kumar` *(or any seeded faculty)* | `faculty123` |
+| Student | *(any seeded student username)* | `student123` |
 
 ---
 
@@ -209,49 +241,61 @@ The application will be available at **http://localhost:5000**
 ```
 smart-college-system/
 │
-├── app.py                      # Application entry point & route registration
+├── app.py                      # Flask application factory & route registration
 ├── config.py                   # Environment-based configuration
 ├── extensions.py               # Flask extension initialization (SQLAlchemy, Login)
 ├── seed_data.py                # Database seeder with realistic sample data
 ├── requirements.txt            # Python dependencies
-├── vercel.json                 # Vercel serverless deployment config
+├── render.yaml                 # Render deployment config
+├── runtime.txt                 # Python version pin
 │
 ├── ml/                         # Machine Learning module
-│   ├── admission_predictor.py  # Admission prediction logic & API
-│   ├── performance_predictor.py# Performance classification logic & API
-│   ├── train_models.py         # Model training & evaluation pipeline
-│   └── saved_models/           # Serialized model files (.pkl)
+│   ├── admission_predictor.py  # Admission Random Forest Regressor
+│   ├── performance_predictor.py# Performance Random Forest Classifier
+│   ├── train_models.py         # Training pipeline & evaluation
+│   └── saved_models/           # Serialized model files (per college)
 │
 ├── models/                     # SQLAlchemy ORM models
 │   ├── user.py                 # User model with role-based access
+│   ├── college.py              # Multi-tenant college isolation
 │   ├── student.py              # Student profile & academic records
 │   ├── faculty.py              # Faculty records
 │   ├── course.py               # Course catalog
 │   ├── attendance.py           # Attendance records
-│   └── grade.py                # Grade & CGPA records
+│   ├── grade.py                # Grade & CGPA records
+│   ├── admission.py            # Historical admission data (ML training)
+│   ├── notification.py         # In-app notifications
+│   └── removal_request.py      # Student removal workflow
 │
 ├── routes/                     # Flask Blueprint route handlers
 │   ├── auth.py                 # Authentication & session management
-│   ├── admin.py                # Admin dashboard & management routes
-│   ├── student.py              # Student-facing routes
-│   ├── faculty.py              # Faculty-facing routes
-│   ├── prediction.py           # ML prediction API endpoints
-│   └── reports.py              # Unified reporting routes
+│   ├── dashboard.py            # Dashboard views per role
+│   ├── students.py             # Student management routes
+│   ├── faculty.py              # Faculty management routes
+│   ├── courses.py              # Course management routes
+│   ├── attendance.py           # Attendance routes
+│   ├── grades.py               # Grade management routes
+│   ├── predictions.py          # ML prediction endpoints
+│   ├── api.py                  # JSON API endpoints
+│   ├── history.py              # Archive & history routes
+│   └── removal_requests.py     # Removal workflow routes
 │
 ├── static/                     # Static assets
 │   ├── css/                    # Stylesheets
 │   ├── js/                     # Client-side JavaScript & Chart.js configs
-│   └── images/                 # UI assets
+│   └── uploads/profiles/       # User profile photos
 │
 └── templates/                  # Jinja2 HTML templates
     ├── base.html               # Base layout template
-    ├── dashboard/              # Dashboard views per role
-    ├── auth/                   # Login & registration templates
+    ├── auth/                   # Login, register, approval templates
+    ├── dashboard/              # Role-specific dashboards
     ├── students/               # Student management templates
     ├── faculty/                # Faculty management templates
     ├── courses/                # Course management templates
-    ├── predictions/            # ML prediction form & result templates
-    └── reports/                # Report generation templates
+    ├── attendance/             # Attendance templates
+    ├── grades/                 # Grade templates
+    ├── predictions/            # ML prediction interfaces
+    └── removal/                # Removal request templates
 ```
 
 ---
@@ -263,54 +307,69 @@ smart-college-system/
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET/POST` | `/login` | User authentication |
+| `GET/POST` | `/register` | New user registration |
 | `GET` | `/logout` | Session termination |
 
-### Admin Operations
+### Dashboards
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/admin/dashboard` | Dashboard with charts & alerts |
-| `GET/POST` | `/admin/students` | Student CRUD |
-| `GET/POST` | `/admin/faculty` | Faculty CRUD |
-| `GET/POST` | `/admin/courses` | Course management |
+| `GET` | `/dashboard` | Role-aware dashboard with charts & alerts |
+
+### Management
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET/POST` | `/students` | Student CRUD |
+| `GET/POST` | `/faculty` | Faculty CRUD |
+| `GET/POST` | `/courses` | Course management |
+| `GET/POST` | `/attendance` | Attendance marking & reports |
+| `GET/POST` | `/grades` | Grade management with CGPA calculation |
 
 ### Predictions
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/predict/admission` | Run admission prediction |
-| `POST` | `/predict/performance` | Run performance prediction |
+| `POST` | `/predictions/admission` | Run admission trend prediction |
+| `POST` | `/predictions/performance` | Run student performance prediction |
 
-### Reports
+### Workflow
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/reports` | Unified reports dashboard |
-| `GET` | `/reports/attendance` | Attendance reports |
-| `GET` | `/reports/grades` | Grade reports |
+| `GET/POST` | `/removal-requests` | Create & manage removal requests |
+| `GET` | `/history` | Archived records & audit log |
 
 ---
 
 ## Deployment
 
-### Vercel (Serverless)
+### Live on Render
 
-The project includes a `vercel.json` configuration for serverless deployment.
+The application is deployed on **Render.com** with the following setup:
 
-1. Install the [Vercel CLI](https://vercel.com/docs/cli)
-2. Set the required environment variable:
-   ```bash
-   vercel env add SECRET_KEY
-   ```
-3. Deploy:
-   ```bash
-   vercel --prod
-   ```
+- **Runtime:** Python 3.11.9 (pinned via `PYTHON_VERSION` env var)
+- **Production server:** Gunicorn
+- **Database:** SQLite on a persistent disk mount
+- **Auto-deploy:** Triggered on every push to `main` branch
+- **Auto-seed:** Database is automatically populated with sample data on first run
+
+### Deploy Your Own Instance
+
+1. Fork this repository
+2. Create a [Render](https://render.com) account and connect your GitHub
+3. Click **New → Web Service** and select your forked repo
+4. Render will auto-detect the `render.yaml` configuration
+5. Add the environment variable in the dashboard:
+   - `PYTHON_VERSION` → `3.11.9`
+   - `SECRET_KEY` → *(auto-generated by Render)*
+6. Click **Create Web Service** and wait ~5 minutes for the first build
 
 ### Environment Variables
 
 | Variable | Description | Required |
 |---|---|---|
+| `PYTHON_VERSION` | Python runtime version | Yes (`3.11.9`) |
 | `SECRET_KEY` | Flask session encryption key | Yes |
 | `DATABASE_URL` | Database connection string (defaults to SQLite) | No |
 
@@ -318,12 +377,14 @@ The project includes a `vercel.json` configuration for serverless deployment.
 
 ## Roadmap
 
-- [ ] REST API layer with JWT authentication
+- [ ] REST API layer with JWT authentication for mobile clients
 - [ ] Email/SMS notifications for at-risk student alerts
 - [ ] Batch prediction uploads via CSV
-- [ ] Model performance monitoring dashboard
+- [ ] Model performance monitoring dashboard with drift detection
+- [ ] PostgreSQL support for production-scale deployments
 - [ ] Docker containerization
-- [ ] PostgreSQL support for production
+- [ ] Automated model retraining on new data
+- [ ] Export reports to PDF and Excel
 
 ---
 
@@ -334,5 +395,6 @@ This project is licensed under the [MIT License](LICENSE).
 ---
 
 <p align="center">
-  Built with Flask, Scikit-learn, and a lot of ☕
+  Built with Flask, Scikit-learn, and a lot of ☕<br>
+  <a href="https://smart-college-system.onrender.com">🚀 View Live Demo</a>
 </p>
