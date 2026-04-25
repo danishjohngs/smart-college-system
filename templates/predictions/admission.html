@@ -3,15 +3,22 @@
 {% block page_title %}AI Admission Prediction{% endblock %}
 
 {% block content %}
-<div class="page-header">
+<div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
     <h2><i class="fas fa-chart-line me-2" style="color: var(--accent);"></i>Admission Trend Prediction</h2>
+    {% if current_user.is_admin() %}
+    <form method="POST" action="{{ url_for('predictions.retrain_models') }}" style="display:inline;" onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').innerHTML='<i class=\'fas fa-spinner fa-spin\'></i> Retraining...';">
+        <button type="submit" class="btn btn-outline-warning" id="retrainBtn" title="Retrain AI models with latest data">
+            <i class="fas fa-sync-alt me-1"></i> Retrain AI Models
+        </button>
+    </form>
+    {% endif %}
 </div>
 
 <!-- Prediction Form -->
 <div class="card mb-4">
     <div class="card-header"><i class="fas fa-brain me-2" style="color: var(--accent);"></i>Generate Prediction</div>
     <div class="card-body">
-        <form method="POST" action="{{ url_for('predictions.admission_prediction') }}" id="admissionForm">
+        <form method="POST" action="{{ url_for('predictions.admission_prediction') }}" id="admissionForm" onsubmit="showLoading('predictBtn')">
             <div class="d-flex flex-wrap gap-3 align-items-end">
                 <div style="flex:1; min-width:150px;">
                     <label class="form-label">Target Year</label>
@@ -31,7 +38,7 @@
                     <input type="number" class="form-control" name="applications" value="150" min="1" max="1000" required>
                 </div>
                 <div>
-                    <button type="submit" class="btn btn-primary" id="predictBtn" onclick="showLoading('predictBtn')">
+                    <button type="submit" class="btn btn-primary" id="predictBtn">
                         <i class="fas fa-brain"></i> Predict
                     </button>
                 </div>

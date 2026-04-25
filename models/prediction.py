@@ -10,6 +10,7 @@ class Prediction(db.Model):
     __tablename__ = 'predictions'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    college_id = db.Column(db.Integer, db.ForeignKey('colleges.id'), nullable=False)
     prediction_type = db.Column(db.String(20), nullable=False)  # 'admission' or 'performance'
     student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=True)
     department = db.Column(db.String(50), nullable=True)

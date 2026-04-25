@@ -19,7 +19,7 @@ def manage_grades():
         flash('Access denied.', 'danger')
         return redirect(url_for('dashboard.index'))
 
-    courses = Course.query.order_by(Course.name).all()
+    courses = Course.query.filter_by(college_id=current_user.college_id).order_by(Course.name).all()
 
     if request.method == 'POST':
         course_id = request.form.get('course_id')
@@ -27,7 +27,7 @@ def manage_grades():
             flash('Please select a course.', 'danger')
             return render_template('grades/manage.html', courses=courses)
 
-        course = Course.query.get(int(course_id))
+        course = Course.query.filter_by(id=int(course_id), college_id=current_user.college_id).first()
         if not course:
             flash('Course not found.', 'danger')
             return render_template('grades/manage.html', courses=courses)
@@ -35,7 +35,8 @@ def manage_grades():
         students = Student.query.filter_by(
             department=course.department,
             semester=course.semester,
-            status='active'
+            status='active',
+            college_id=current_user.college_id
         ).order_by(Student.name).all()
 
         try:
@@ -85,12 +86,13 @@ def manage_grades():
     existing_grades = {}
 
     if selected_course_id:
-        course = Course.query.get(int(selected_course_id))
+        course = Course.query.filter_by(id=int(selected_course_id), college_id=current_user.college_id).first()
         if course:
             students = Student.query.filter_by(
                 department=course.department,
                 semester=course.semester,
-                status='active'
+                status='active',
+                college_id=current_user.college_id
             ).order_by(Student.name).all()
 
             for grade in Grade.query.filter_by(course_id=course.id).all():
@@ -125,7 +127,7 @@ def _update_student_cgpa(student):
 @login_required
 def view_grades(student_id):
     """View grades for a specific student."""
-    student = Student.query.get_or_404(student_id)
+    student = Student.query.filter_by(id=student_id, college_id=current_user.college_id).first_or_404()
 
     # Access control for students
     if current_user.is_student():
@@ -164,7 +166,7 @@ def grade_report():
     grade_dist = {'A+': 0, 'A': 0, 'B+': 0, 'B': 0, 'C+': 0, 'C': 0, 'D': 0, 'F': 0}
 
     if selected_dept:
-        students = Student.query.filter_by(department=selected_dept, status='active').order_by(Student.name).all()
+        students = Student.query.filter_by(department=selected_dept, status='active', college_id=current_user.college_id).order_by(Student.name).all()
         for student in students:
             grades = Grade.query.filter_by(student_id=student.id).all()
             for g in grades:
@@ -177,7 +179,7 @@ def grade_report():
             })
     else:
         # Overall distribution
-        all_grades = Grade.query.all()
+        all_grades = db.session.query(Grade).join(Student).filter(Student.college_id == current_user.college_id).all()
         for g in all_grades:
             if g.grade in grade_dist:
                 grade_dist[g.grade] += 1

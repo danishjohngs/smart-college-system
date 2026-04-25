@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Request Student Removal — Smart College System{% endblock %}
+{% block page_title %}Request Student Removal{% endblock %}
+
+{% block content %}
+<!-- Back Button -->
+<div style="margin-bottom: 1rem;">
+    <a href="{{ url_for('students.profile', id=student.id) }}" class="btn btn-sm btn-outline-primary">
+        <i class="fas fa-arrow-left"></i> Back to Profile
+    </a>
+</div>
+
+<!-- Warning Banner -->
+<div style="margin-bottom: 1.5rem; padding: 0.75rem 1rem; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: var(--radius-sm); font-size: 0.85rem; color: #f59e0b;">
+    <i class="fas fa-exclamation-triangle"></i>
+    <strong>Important:</strong> This request will be sent to the administrator for approval. The student will NOT be removed until the admin approves AND you confirm the removal.
+</div>
+
+<!-- Student Info Card (Read-only) -->
+<div class="card mb-4">
+    <div class="card-header"><i class="fas fa-user-graduate me-2" style="color: var(--accent);"></i>Student Information</div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <table class="table" style="margin-bottom: 0;">
+                    <tr><td style="color: var(--text-muted); width: 140px;">Name</td><td><strong>{{ student.name }}</strong></td></tr>
+                    <tr><td style="color: var(--text-muted);">Roll Number</td><td>{{ student.roll_number }}</td></tr>
+                    <tr><td style="color: var(--text-muted);">Department</td><td>{{ student.department }}</td></tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <table class="table" style="margin-bottom: 0;">
+                    <tr><td style="color: var(--text-muted); width: 140px;">Semester</td><td>{{ student.semester }}</td></tr>
+                    <tr><td style="color: var(--text-muted);">Email</td><td>{{ student.email or 'N/A' }}</td></tr>
+                    <tr><td style="color: var(--text-muted);">Phone</td><td>{{ student.phone or 'N/A' }}</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Removal Request Form -->
+<div class="card">
+    <div class="card-header"><i class="fas fa-user-minus me-2" style="color: #ef4444;"></i>Removal Request Details</div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('removal.submit_request', student_id=student.id) }}">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Student Class / Section <span style="color: #ef4444;">*</span></label>
+                    <input type="text" name="student_class" class="form-control" required
+                           placeholder="e.g., BCA 3rd Year Section A" value="{{ request.form.get('student_class', '') }}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Parent / Guardian Phone <span style="color: #ef4444;">*</span></label>
+                    <input type="tel" name="parent_phone" class="form-control" required minlength="10"
+                           placeholder="e.g., 9876543210" value="{{ request.form.get('parent_phone', '') }}">
+                    <small style="color: var(--text-muted);">Minimum 10 digits</small>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Reason for Removal <span style="color: #ef4444;">*</span></label>
+                <textarea name="reason" class="form-control" rows="4" required minlength="20"
+                          placeholder="Provide a detailed reason for requesting this student's removal (minimum 20 characters)...">{{ request.form.get('reason', '') }}</textarea>
+                <small style="color: var(--text-muted);">Be specific — include dates, incidents, or policy violations. Minimum 20 characters.</small>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Additional Remarks <span style="color: var(--text-muted);">(Optional)</span></label>
+                <textarea name="additional_remarks" class="form-control" rows="2"
+                          placeholder="Any additional notes for the administrator...">{{ request.form.get('additional_remarks', '') }}</textarea>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-danger"
+                        onclick="return confirm('Submit this removal request? It will be sent to the administrator for review.')">
+                    <i class="fas fa-paper-plane"></i> Submit Request
+                </button>
+                <a href="{{ url_for('students.profile', id=student.id) }}" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

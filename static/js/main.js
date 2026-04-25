@@ -203,8 +203,11 @@ function confirmDelete(name, formId) {
 function showLoading(buttonId) {
     const btn = document.getElementById(buttonId);
     if (!btn) return;
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Processing...';
+    // Tiny delay allows form submission to start before button is disabled
+    setTimeout(() => {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Processing...';
+    }, 10);
 }
 
 // ========== Attendance Marking Helper ==========

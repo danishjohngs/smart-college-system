@@ -22,7 +22,7 @@ def mark_attendance():
         flash('Access denied.', 'danger')
         return redirect(url_for('dashboard.index'))
 
-    courses = Course.query.order_by(Course.name).all()
+    courses = Course.query.filter_by(college_id=current_user.college_id).order_by(Course.name).all()
 
     if request.method == 'POST':
         course_id = request.form.get('course_id')
@@ -34,7 +34,7 @@ def mark_attendance():
 
         try:
             att_date = datetime.strptime(att_date_str, '%Y-%m-%d').date()
-            course = Course.query.get(int(course_id))
+            course = Course.query.filter_by(id=int(course_id), college_id=current_user.college_id).first()
             if not course:
                 flash('Course not found.', 'danger')
                 return render_template('attendance/mark.html', courses=courses)
@@ -43,7 +43,8 @@ def mark_attendance():
             students = Student.query.filter_by(
                 department=course.department,
                 semester=course.semester,
-                status='active'
+                status='active',
+                college_id=current_user.college_id
             ).order_by(Student.name).all()
 
             # Get faculty for marked_by
@@ -91,12 +92,13 @@ def mark_attendance():
     existing_attendance = {}
 
     if selected_course_id:
-        course = Course.query.get(int(selected_course_id))
+        course = Course.query.filter_by(id=int(selected_course_id), college_id=current_user.college_id).first()
         if course:
             students = Student.query.filter_by(
                 department=course.department,
                 semester=course.semester,
-                status='active'
+                status='active',
+                college_id=current_user.college_id
             ).order_by(Student.name).all()
 
             # Get existing attendance for this date
@@ -121,12 +123,12 @@ def view_attendance():
     date_from = request.args.get('date_from', '')
     date_to = request.args.get('date_to', '')
 
-    query = Attendance.query
+    query = db.session.query(Attendance).join(Student).filter(Student.college_id == current_user.college_id)
 
     if course_id:
-        query = query.filter_by(course_id=int(course_id))
+        query = query.filter(Attendance.course_id == int(course_id))
     if student_id:
-        query = query.filter_by(student_id=int(student_id))
+        query = query.filter(Attendance.student_id == int(student_id))
     if date_from:
         query = query.filter(Attendance.date >= datetime.strptime(date_from, '%Y-%m-%d').date())
     if date_to:
@@ -136,11 +138,13 @@ def view_attendance():
     if current_user.is_student():
         student = Student.query.filter_by(user_id=current_user.id).first()
         if student:
-            query = query.filter_by(student_id=student.id)
+            query = query.filter(Attendance.student_id == student.id)
+        else:
+            query = query.filter(Attendance.id == -1)
 
     records = query.order_by(Attendance.date.desc()).limit(500).all()
-    courses = Course.query.order_by(Course.name).all()
-    students = Student.query.filter_by(status='active').order_by(Student.name).all()
+    courses = Course.query.filter_by(college_id=current_user.college_id).order_by(Course.name).all()
+    students = Student.query.filter_by(status='active', college_id=current_user.college_id).order_by(Student.name).all()
 
     return render_template('attendance/view.html',
                            records=records,
@@ -158,18 +162,19 @@ def view_attendance():
 @login_required
 def attendance_report():
     """Attendance report with statistics."""
-    courses = Course.query.order_by(Course.name).all()
+    courses = Course.query.filter_by(college_id=current_user.college_id).order_by(Course.name).all()
     course_id = request.args.get('course_id', '')
 
     report_data = []
 
     if course_id:
-        course = Course.query.get(int(course_id))
+        course = Course.query.filter_by(id=int(course_id), college_id=current_user.college_id).first()
         if course:
             students = Student.query.filter_by(
                 department=course.department,
                 semester=course.semester,
-                status='active'
+                status='active',
+                college_id=current_user.college_id
             ).order_by(Student.name).all()
 
             for student in students:

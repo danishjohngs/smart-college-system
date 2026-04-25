@@ -70,7 +70,27 @@
             <tr>
                 <td>{{ loop.index }}</td>
                 <td><strong>{{ student.roll_number }}</strong></td>
-                <td>{{ student.name }}</td>
+                <td>
+                    <div class="d-flex align-items-center gap-2">
+                        {% set student_user = None %}
+                        {% if student.user_id %}
+                            {% set student_user = student.user %}
+                        {% endif %}
+                        {% if student_user and student_user.profile_photo %}
+                            <img src="{{ url_for('static', filename='uploads/profiles/' + student_user.profile_photo) }}" 
+                                 alt="" class="rounded-circle" style="width: 36px; height: 36px; object-fit: cover;">
+                        {% else %}
+                            <div class="rounded-circle d-flex align-items-center justify-content-center" 
+                                 style="width: 36px; height: 36px; background: #3b82f6; color: white; font-size: 14px; font-weight: 600;">
+                                {{ student.name[0]|upper }}
+                            </div>
+                        {% endif %}
+                        <div>
+                            <div class="fw-semibold">{{ student.name }}</div>
+                            <small class="text-muted">{{ student.email or '' }}</small>
+                        </div>
+                    </div>
+                </td>
                 <td>{{ student.department }}</td>
                 <td>{{ student.semester }}</td>
                 <td>{{ student.cgpa }}</td>
@@ -85,8 +105,15 @@
                         {% endif %}
                         {% if current_user.is_admin() %}
                         <form method="POST" action="{{ url_for('students.delete_student', id=student.id) }}" style="display:inline;" id="deleteForm{{ student.id }}">
-                            <button type="button" class="btn btn-sm btn-danger" onclick="confirmDelete('{{ student.name }}', 'deleteForm{{ student.id }}')" title="Deactivate"><i class="fas fa-trash"></i></button>
+                            <button type="submit" class="btn btn-sm btn-danger" title="Remove & Archive"
+                                    onclick="return confirm('This will archive {{ student.name }}. Their academic records will be preserved in History. Continue?')">
+                                <i class="fas fa-archive"></i>
+                            </button>
                         </form>
+                        {% elif current_user.is_faculty() %}
+                        <a href="{{ url_for('removal.submit_request', student_id=student.id) }}" class="btn btn-sm btn-warning" title="Request Removal">
+                            <i class="fas fa-user-minus"></i>
+                        </a>
                         {% endif %}
                     </div>
                 </td>

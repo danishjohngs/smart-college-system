@@ -15,11 +15,13 @@ import joblib
 class AdmissionPredictor:
     """Predicts future admission numbers using historical data."""
 
-    def __init__(self):
+    def __init__(self, model_path=None, encoder_path=None):
         self.model = None
         self.label_encoder = LabelEncoder()
-        self.model_path = os.path.join(os.path.dirname(__file__), 'saved_models', 'admission_model.pkl')
-        self.encoder_path = os.path.join(os.path.dirname(__file__), 'saved_models', 'admission_encoder.pkl')
+        
+        base_dir = os.path.dirname(__file__)
+        self.model_path = model_path or os.path.join(base_dir, 'saved_models', 'admission_model.pkl')
+        self.encoder_path = encoder_path or os.path.join(base_dir, 'saved_models', 'admission_encoder.pkl')
 
     def train(self, data):
         """
@@ -41,12 +43,12 @@ class AdmissionPredictor:
 
         # Handle small datasets — use all data for training if < 10 records
         if len(df) < 10:
-            self.model = RandomForestRegressor(n_estimators=100, random_state=42)
+            self.model = RandomForestRegressor(n_estimators=50, random_state=42, n_jobs=1)
             self.model.fit(X, y)
             score = 1.0
         else:
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-            self.model = RandomForestRegressor(n_estimators=100, random_state=42)
+            self.model = RandomForestRegressor(n_estimators=50, random_state=42, n_jobs=1)
             self.model.fit(X_train, y_train)
             predictions = self.model.predict(X_test)
             score = max(r2_score(y_test, predictions), 0)  # Clamp to 0 minimum

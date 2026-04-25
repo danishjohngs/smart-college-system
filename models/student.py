@@ -9,6 +9,7 @@ class Student(db.Model):
     __tablename__ = 'students'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    college_id = db.Column(db.Integer, db.ForeignKey('colleges.id'), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     name = db.Column(db.String(100), nullable=False)
     roll_number = db.Column(db.String(20), unique=True, nullable=False, index=True)
@@ -21,7 +22,11 @@ class Student(db.Model):
     gender = db.Column(db.String(10))
     address = db.Column(db.Text)
     cgpa = db.Column(db.Float, default=0.0)
-    status = db.Column(db.String(20), default='active')  # active, inactive, graduated
+    status = db.Column(db.String(20), default='active')
+    # Values: 'active', 'inactive', 'graduated', 'removed'
+
+    removed_at = db.Column(db.DateTime, nullable=True)
+    removed_reason = db.Column(db.Text, nullable=True)
 
     # Relationships
     attendances = db.relationship('Attendance', backref='student', lazy=True, cascade='all, delete-orphan')
@@ -43,6 +48,10 @@ class Student(db.Model):
             return 0.0
         present = sum(1 for a in records if a.status == 'present')
         return round((present / len(records)) * 100, 2)
+
+    def is_removed(self):
+        """Check if this student has been archived/removed."""
+        return self.status == 'removed'
 
     def __repr__(self):
         return f'<Student {self.name} ({self.roll_number})>'

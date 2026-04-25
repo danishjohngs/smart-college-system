@@ -1,12 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Register User — Smart College System{% endblock %}
-{% block page_title %}Register New User{% endblock %}
+{% block title %}Create User — Smart College System{% endblock %}
+{% block page_title %}Create New User{% endblock %}
 
 {% block content %}
 <div class="form-card">
     <h3><i class="fas fa-user-plus me-2" style="color: var(--accent);"></i>Create New User Account</h3>
+    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+        <i class="fas fa-info-circle"></i> Users created here are <strong>auto-approved</strong> and can login immediately.
+    </p>
 
-    <form method="POST" action="{{ url_for('auth.register') }}" id="registerForm">
+    <form method="POST" action="{{ url_for('auth.admin_register') }}" id="registerForm">
         <div class="form-row mb-3">
             <div>
                 <label class="form-label" for="username">Username</label>
@@ -21,7 +24,7 @@
         <div class="form-row mb-3">
             <div>
                 <label class="form-label" for="password">Password</label>
-                <input type="password" class="form-control" id="password" name="password" required minlength="6">
+                <input type="password" class="form-control" id="password" name="password" required minlength="8">
             </div>
             <div>
                 <label class="form-label" for="confirm_password">Confirm Password</label>
@@ -40,7 +43,7 @@
 
         <div class="d-flex gap-2">
             <button type="submit" class="btn btn-primary">
-                <i class="fas fa-user-plus"></i> Register User
+                <i class="fas fa-user-plus"></i> Create User
             </button>
             <a href="{{ url_for('dashboard.index') }}" class="btn btn-outline-primary">
                 <i class="fas fa-arrow-left"></i> Cancel

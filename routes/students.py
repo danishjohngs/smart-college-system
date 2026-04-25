@@ -23,7 +23,7 @@ def list_students():
     status = request.args.get('status', '')
     search = request.args.get('search', '')
 
-    query = Student.query
+    query = Student.query.filter(Student.status != 'removed', Student.college_id == current_user.college_id)
 
     if department:
         query = query.filter_by(department=department)
@@ -65,6 +65,7 @@ def add_student():
     if request.method == 'POST':
         try:
             student = Student(
+                college_id=current_user.college_id,
                 name=request.form.get('name', '').strip(),
                 roll_number=request.form.get('roll_number', '').strip(),
                 email=request.form.get('email', '').strip(),
@@ -113,7 +114,7 @@ def edit_student(id):
         flash('Access denied.', 'danger')
         return redirect(url_for('students.list_students'))
 
-    student = Student.query.get_or_404(id)
+    student = Student.query.filter_by(id=id, college_id=current_user.college_id).first_or_404()
 
     if request.method == 'POST':
         try:
@@ -153,7 +154,7 @@ def edit_student(id):
 @login_required
 def profile(id):
     """View student profile with academic details."""
-    student = Student.query.get_or_404(id)
+    student = Student.query.filter_by(id=id, college_id=current_user.college_id).first_or_404()
 
     # Check student access — students can only see their own profile
     if current_user.is_student():
@@ -199,13 +200,36 @@ def profile(id):
 @login_required
 @admin_required
 def delete_student(id):
-    """Delete (deactivate) a student."""
-    student = Student.query.get_or_404(id)
+    """Archive a student — mark as removed, delete user account to free username/email."""
+    student = Student.query.filter_by(id=id, college_id=current_user.college_id).first_or_404()
+    student_name = student.name
+    user_id = student.user_id
+
     try:
-        student.status = 'inactive'
+        from datetime import datetime
+
+        # 1. Mark student as 'removed' (DO NOT delete the student record)
+        student.status = 'removed'
+        student.removed_at = datetime.utcnow()
+        student.user_id = None  # Unlink from user account
+
+        # 2. Delete ONLY the User account (frees username and email for re-registration)
+        if user_id:
+            from models.notification import Notification
+            # Delete notifications (transient UI items, not academic records)
+            Notification.query.filter_by(recipient_id=user_id).delete()
+            Notification.query.filter_by(related_user_id=user_id).delete()
+
+            user = User.query.get(user_id)
+            if user:
+                db.session.delete(user)
+
+        # 3. Keep ALL attendance, grades, predictions — they stay linked to student.id
         db.session.commit()
-        flash(f'Student "{student.name}" has been deactivated.', 'success')
+        flash(f'Student "{student_name}" has been removed. Academic records are preserved in History.', 'success')
+
     except Exception as e:
         db.session.rollback()
         flash(f'Error: {str(e)}', 'danger')
+
     return redirect(url_for('students.list_students'))

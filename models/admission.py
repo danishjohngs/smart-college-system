@@ -10,6 +10,7 @@ class AdmissionRecord(db.Model):
     __tablename__ = 'admission_records'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    college_id = db.Column(db.Integer, db.ForeignKey('colleges.id'), nullable=False)
     year = db.Column(db.Integer, nullable=False)
     department = db.Column(db.String(50), nullable=False)
     applications_received = db.Column(db.Integer, nullable=False, default=0)

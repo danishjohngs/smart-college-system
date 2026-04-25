@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}History & Archives — Smart College System{% endblock %}
+{% block page_title %}History & Archives{% endblock %}
+
+{% block content %}
+<!-- Archive Banner -->
+<div style="margin-bottom: 1.5rem; padding: 0.75rem 1rem; background: linear-gradient(135deg, rgba(100,116,139,0.15), rgba(71,85,105,0.1)); border: 1px solid rgba(100,116,139,0.3); border-radius: var(--radius-sm); font-size: 0.85rem; color: var(--text-secondary);">
+    <i class="fas fa-shield-alt" style="color: #94a3b8;"></i>
+    <strong>Read-Only Archives</strong> — These records are preserved for auditing and accreditation purposes. Academic data (attendance, grades, predictions) is kept permanently even after students or faculty are removed.
+</div>
+
+<!-- Stats -->
+<div class="stats-grid" style="margin-bottom: 1.5rem;">
+    <div class="stat-card" style="border-left: 4px solid #64748b;">
+        <div class="stat-icon" style="background: rgba(100,116,139,0.15); color: #94a3b8;">
+            <i class="fas fa-user-graduate"></i>
+        </div>
+        <div class="stat-info">
+            <h3>{{ total_removed_students }}</h3>
+            <p>Removed Students</p>
+        </div>
+    </div>
+    <div class="stat-card" style="border-left: 4px solid #64748b;">
+        <div class="stat-icon" style="background: rgba(100,116,139,0.15); color: #94a3b8;">
+            <i class="fas fa-chalkboard-teacher"></i>
+        </div>
+        <div class="stat-info">
+            <h3>{{ total_removed_faculty }}</h3>
+            <p>Removed Faculty</p>
+        </div>
+    </div>
+    <div class="stat-card" style="border-left: 4px solid #64748b;">
+        <div class="stat-icon" style="background: rgba(100,116,139,0.15); color: #94a3b8;">
+            <i class="fas fa-clipboard-check"></i>
+        </div>
+        <div class="stat-info">
+            <h3>{{ archived_attendance_count }}</h3>
+            <p>Archived Attendance</p>
+        </div>
+    </div>
+    <div class="stat-card" style="border-left: 4px solid #64748b;">
+        <div class="stat-icon" style="background: rgba(100,116,139,0.15); color: #94a3b8;">
+            <i class="fas fa-chart-bar"></i>
+        </div>
+        <div class="stat-info">
+            <h3>{{ archived_grade_count }}</h3>
+            <p>Archived Grades</p>
+        </div>
+    </div>
+</div>
+
+<!-- Removed Students -->
+<div class="card mb-4">
+    <div class="card-header" style="display: flex; align-items: center; gap: 0.5rem;">
+        <i class="fas fa-user-graduate" style="color: #94a3b8;"></i>
+        Removed Students
+        <span class="badge" style="background: rgba(100,116,139,0.2); color: #94a3b8; font-size: 0.7rem; margin-left: auto;">
+            <i class="fas fa-archive"></i> ARCHIVED
+        </span>
+    </div>
+    <div class="card-body">
+        {% if removed_students %}
+        <div class="table-container">
+            <table class="table" style="opacity: 0.85;">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>Roll Number</th>
+                        <th>Department</th>
+                        <th>Semester</th>
+                        <th>Last CGPA</th>
+                        <th>Removed</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in removed_students %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>
+                            <span style="color: var(--text-muted); text-decoration: line-through;">{{ student.name }}</span>
+                        </td>
+                        <td>{{ student.roll_number }}</td>
+                        <td>{{ student.department }}</td>
+                        <td>{{ student.semester }}</td>
+                        <td>{{ student.cgpa or '—' }}</td>
+                        <td>
+                            {% if student.removed_at %}
+                            <small style="color: var(--text-muted);">{{ student.removed_at.strftime('%d %b %Y') }}</small>
+                            {% else %}
+                            <small style="color: var(--text-muted);">—</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('history.student_history', id=student.id) }}" class="btn btn-sm btn-outline-secondary" style="color: #94a3b8; border-color: #475569;">
+                                <i class="fas fa-eye"></i> View History
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state" style="padding: 2rem; text-align: center; color: var(--text-muted);">
+            <i class="fas fa-user-graduate" style="font-size: 2rem; opacity: 0.3; display: block; margin-bottom: 0.5rem;"></i>
+            No archived student records.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Removed Faculty -->
+<div class="card">
+    <div class="card-header" style="display: flex; align-items: center; gap: 0.5rem;">
+        <i class="fas fa-chalkboard-teacher" style="color: #94a3b8;"></i>
+        Removed Faculty
+        <span class="badge" style="background: rgba(100,116,139,0.2); color: #94a3b8; font-size: 0.7rem; margin-left: auto;">
+            <i class="fas fa-archive"></i> ARCHIVED
+        </span>
+    </div>
+    <div class="card-body">
+        {% if removed_faculty %}
+        <div class="table-container">
+            <table class="table" style="opacity: 0.85;">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>Employee ID</th>
+                        <th>Department</th>
+                        <th>Designation</th>
+                        <th>Removed On</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fac in removed_faculty %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>
+                            <span style="color: var(--text-muted); text-decoration: line-through;">{{ fac.name }}</span>
+                        </td>
+                        <td>{{ fac.employee_id }}</td>
+                        <td>{{ fac.department }}</td>
+                        <td>{{ fac.designation or '—' }}</td>
+                        <td>
+                            {% if fac.removed_at %}
+                            <small style="color: var(--text-muted);">{{ fac.removed_at.strftime('%d %b %Y') }}</small>
+                            {% else %}
+                            <small style="color: var(--text-muted);">—</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('history.faculty_history', id=fac.id) }}" class="btn btn-sm btn-outline-secondary" style="color: #94a3b8; border-color: #475569;">
+                                <i class="fas fa-eye"></i> View History
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state" style="padding: 2rem; text-align: center; color: var(--text-muted);">
+            <i class="fas fa-chalkboard-teacher" style="font-size: 2rem; opacity: 0.3; display: block; margin-bottom: 0.5rem;"></i>
+            No archived faculty records.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

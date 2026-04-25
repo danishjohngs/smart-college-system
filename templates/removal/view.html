@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}Removal Request — {{ removal_request.student_name }}{% endblock %}
+{% block page_title %}Removal Request Details{% endblock %}
+
+{% block content %}
+<!-- Back Button -->
+<div style="margin-bottom: 1rem;">
+    <a href="{{ url_for('removal.list_requests') }}" class="btn btn-sm btn-outline-primary">
+        <i class="fas fa-arrow-left"></i> Back to Removal Requests
+    </a>
+</div>
+
+<!-- Status Banner -->
+<div style="margin-bottom: 1.5rem; padding: 0.75rem 1rem; border-radius: var(--radius-sm); font-size: 0.85rem;
+    {% if removal_request.status == 'pending' %}
+    background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); color: #f59e0b;
+    {% elif removal_request.status == 'approved' %}
+    background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); color: #10b981;
+    {% else %}
+    background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #ef4444;
+    {% endif %}">
+    {% if removal_request.status == 'pending' %}
+        <i class="fas fa-clock"></i> <strong>Pending</strong> — This request is awaiting administrator review.
+    {% elif removal_request.status == 'approved' %}
+        <i class="fas fa-check-circle"></i> <strong>Approved</strong> — Student has been removed from the system.
+
+    {% else %}
+        <i class="fas fa-times-circle"></i> <strong>Rejected</strong> — Administrator has rejected this request.
+    {% endif %}
+</div>
+
+<!-- Student Info -->
+<div class="card mb-4">
+    <div class="card-header"><i class="fas fa-user-graduate me-2" style="color: var(--accent);"></i>Student Information</div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <table class="table" style="margin-bottom: 0;">
+                    <tr><td style="color: var(--text-muted); width: 140px;">Name</td><td><strong>{{ removal_request.student_name }}</strong></td></tr>
+                    <tr><td style="color: var(--text-muted);">Roll Number</td><td>{{ removal_request.student_roll_number }}</td></tr>
+                    <tr><td style="color: var(--text-muted);">Department</td><td>{{ removal_request.student_department }}</td></tr>
+                    <tr><td style="color: var(--text-muted);">Semester</td><td>{{ removal_request.student_semester or '—' }}</td></tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <table class="table" style="margin-bottom: 0;">
+                    <tr><td style="color: var(--text-muted); width: 140px;">Class / Section</td><td>{{ removal_request.student_class }}</td></tr>
+                    <tr><td style="color: var(--text-muted);">Email</td><td>{{ removal_request.student_email or '—' }}</td></tr>
+                    <tr><td style="color: var(--text-muted);">Phone</td><td>{{ removal_request.student_phone or '—' }}</td></tr>
+                    <tr><td style="color: var(--text-muted);">Parent Phone</td><td><strong>{{ removal_request.parent_phone }}</strong></td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Request Details -->
+<div class="card mb-4">
+    <div class="card-header"><i class="fas fa-file-alt me-2" style="color: var(--accent);"></i>Request Details</div>
+    <div class="card-body">
+        <table class="table" style="margin-bottom: 0;">
+            <tr>
+                <td style="color: var(--text-muted); width: 160px;">Requested By</td>
+                <td>
+                    {% if removal_request.requester %}
+                    <strong>{{ removal_request.requester.full_name or removal_request.requester.username }}</strong>
+                    <span class="badge-status" style="background: #d1fae5; color: #065f46; margin-left: 0.5rem;">Faculty</span>
+                    {% else %}
+                    <span style="color: var(--text-muted);">Unknown</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td style="color: var(--text-muted);">Submitted On</td>
+                <td>{{ removal_request.created_at.strftime('%d %b %Y at %H:%M') }}</td>
+            </tr>
+            <tr>
+                <td style="color: var(--text-muted);">Reason</td>
+                <td style="white-space: pre-wrap;">{{ removal_request.reason }}</td>
+            </tr>
+            {% if removal_request.additional_remarks %}
+            <tr>
+                <td style="color: var(--text-muted);">Additional Remarks</td>
+                <td style="white-space: pre-wrap;">{{ removal_request.additional_remarks }}</td>
+            </tr>
+            {% endif %}
+        </table>
+    </div>
+</div>
+
+<!-- Admin Response -->
+{% if removal_request.reviewed_by %}
+<div class="card mb-4">
+    <div class="card-header">
+        <i class="fas fa-shield-alt me-2" style="color: {% if removal_request.status == 'approved' %}#10b981{% else %}#ef4444{% endif %};"></i>
+        Administrator Response
+    </div>
+    <div class="card-body">
+        <table class="table" style="margin-bottom: 0;">
+            <tr>
+                <td style="color: var(--text-muted); width: 160px;">Reviewed By</td>
+                <td>
+                    {% if removal_request.reviewer %}
+                    {{ removal_request.reviewer.full_name or removal_request.reviewer.username }}
+                    {% else %}
+                    <span style="color: var(--text-muted);">Unknown</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td style="color: var(--text-muted);">Reviewed On</td>
+                <td>{{ removal_request.reviewed_at.strftime('%d %b %Y at %H:%M') if removal_request.reviewed_at else '—' }}</td>
+            </tr>
+            <tr>
+                <td style="color: var(--text-muted);">Decision</td>
+                <td>
+                    {% if removal_request.status == 'approved' %}
+                    <span style="color: #10b981; font-weight: 600;"><i class="fas fa-check-circle"></i> Approved</span>
+                    {% else %}
+                    <span style="color: #ef4444; font-weight: 600;"><i class="fas fa-times-circle"></i> Rejected</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% if removal_request.admin_remarks %}
+            <tr>
+                <td style="color: var(--text-muted);">Remarks</td>
+                <td>{{ removal_request.admin_remarks }}</td>
+            </tr>
+            {% endif %}
+        </table>
+    </div>
+</div>
+{% endif %}
+
+
+<!-- Action Buttons -->
+{% if current_user.is_admin() and removal_request.status == 'pending' %}
+<div class="card">
+    <div class="card-header"><i class="fas fa-gavel me-2" style="color: var(--accent);"></i>Admin Actions</div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <form method="POST" action="{{ url_for('removal.approve_request', request_id=removal_request.id) }}">
+                    <div class="mb-2">
+                        <label class="form-label" style="font-size: 0.85rem;">Remarks (optional)</label>
+                        <input type="text" name="admin_remarks" class="form-control form-control-sm" placeholder="Optional approval remarks">
+                    </div>
+                    <button type="submit" class="btn btn-success" onclick="return confirm('Approve this removal request?')">
+                        <i class="fas fa-check"></i> Approve Request
+                    </button>
+                </form>
+            </div>
+            <div class="col-md-6">
+                <form method="POST" action="{{ url_for('removal.reject_request', request_id=removal_request.id) }}">
+                    <div class="mb-2">
+                        <label class="form-label" style="font-size: 0.85rem;">Rejection Reason <span style="color: #ef4444;">*</span></label>
+                        <input type="text" name="admin_remarks" class="form-control form-control-sm" placeholder="Reason for rejection (required)" required minlength="5">
+                    </div>
+                    <button type="submit" class="btn btn-danger" onclick="return confirm('Reject this removal request?')">
+                        <i class="fas fa-times"></i> Reject Request
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

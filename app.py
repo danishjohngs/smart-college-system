@@ -16,6 +16,12 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
+    # Configure Upload Folder for Profile Photos
+    UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'uploads', 'profiles')
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+    app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB max
+
     # Initialize extensions
     db.init_app(app)
     login_manager.init_app(app)
@@ -27,6 +33,49 @@ def create_app():
     def load_user(user_id):
         return User.query.get(int(user_id))
 
+    # Context processor: inject counts into every template
+    @app.context_processor
+    def inject_global_counts():
+        """Make approval pending count and notification count available in all templates."""
+        from flask_login import current_user as ctx_user
+        if ctx_user.is_authenticated:
+            from models.notification import Notification
+
+            approval_pending_count = 0
+            unread_notification_count = 0
+
+            if ctx_user.is_admin():
+                approval_pending_count = User.query.filter_by(status='pending', college_id=ctx_user.college_id).count()
+            elif ctx_user.is_faculty():
+                from models.faculty import Faculty
+                fac = Faculty.query.filter_by(user_id=ctx_user.id).first()
+                if fac:
+                    approval_pending_count = User.query.filter_by(
+                        status='pending', role='student', department=fac.department, college_id=ctx_user.college_id
+                    ).count()
+
+            unread_notification_count = Notification.query.filter_by(
+                recipient_id=ctx_user.id, is_read=False
+            ).count()
+
+            # Removal request pending count
+            removal_pending_count = 0
+            if ctx_user.is_admin():
+                from models.removal_request import RemovalRequest
+                removal_pending_count = RemovalRequest.query.filter_by(status='pending').count()
+            elif ctx_user.is_faculty():
+                from models.removal_request import RemovalRequest
+                removal_pending_count = RemovalRequest.query.filter_by(
+                    requested_by=ctx_user.id, status='approved', faculty_action=None
+                ).count()
+
+            return {
+                'approval_pending_count': approval_pending_count,
+                'unread_notification_count': unread_notification_count,
+                'removal_pending_count': removal_pending_count
+            }
+        return {'approval_pending_count': 0, 'unread_notification_count': 0, 'removal_pending_count': 0}
+
     # Register blueprints
     from routes.auth import auth_bp
     from routes.dashboard import dashboard_bp
@@ -37,6 +86,8 @@ def create_app():
     from routes.grades import grades_bp
     from routes.predictions import predictions_bp
     from routes.api import api_bp
+    from routes.history import history_bp
+    from routes.removal_requests import removal_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -47,10 +98,15 @@ def create_app():
     app.register_blueprint(grades_bp)
     app.register_blueprint(predictions_bp)
     app.register_blueprint(api_bp)
+    app.register_blueprint(history_bp)
+    app.register_blueprint(removal_bp)
 
     # Root route
     @app.route('/')
     def index():
+        from flask_login import current_user
+        if current_user.is_authenticated:
+            return redirect(url_for('dashboard.index'))
         return redirect(url_for('auth.login'))
 
     # Error handlers

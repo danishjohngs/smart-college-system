@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Notifications — Smart College System{% endblock %}
+{% block page_title %}Notifications{% endblock %}
+
+{% block content %}
+<div class="table-container">
+    {% if notifications %}
+    <div class="p-3">
+        {% for notif in notifications %}
+        <div style="padding: 0.85rem 1rem; border-bottom: 1px solid var(--border-color); display: flex; align-items: flex-start; gap: 0.75rem;
+                    {% if not notif.is_read %}background: rgba(59,130,246,0.04);{% endif %}">
+            <div style="width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+                        {% if notif.notification_type == 'approved' %}background: #d1fae5; color: #065f46;
+                        {% elif notif.notification_type == 'rejected' %}background: #fee2e2; color: #991b1b;
+                        {% elif notif.notification_type in ('faculty_registration', 'student_registration') %}background: #fef3c7; color: #92400e;
+                        {% else %}background: #dbeafe; color: #1d4ed8;{% endif %}">
+                {% if notif.notification_type == 'approved' %}
+                    <i class="fas fa-check-circle"></i>
+                {% elif notif.notification_type == 'rejected' %}
+                    <i class="fas fa-times-circle"></i>
+                {% elif notif.notification_type in ('faculty_registration', 'student_registration') %}
+                    <i class="fas fa-user-plus"></i>
+                {% else %}
+                    <i class="fas fa-bell"></i>
+                {% endif %}
+            </div>
+            <div style="flex: 1;">
+                <div style="font-weight: 600; font-size: 0.875rem; color: var(--text-primary);">
+                    {{ notif.title }}
+                    {% if not notif.is_read %}
+                    <span class="badge bg-primary" style="font-size: 0.6rem; vertical-align: middle;">NEW</span>
+                    {% endif %}
+                </div>
+                <div style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.15rem;">
+                    {{ notif.message }}
+                </div>
+                <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.35rem;">
+                    <i class="fas fa-clock"></i> {{ notif.created_at.strftime('%d %b %Y, %I:%M %p') if notif.created_at else '' }}
+                    {% if notif.notification_type in ('faculty_registration', 'student_registration') and not notif.action_taken %}
+                        &nbsp;·&nbsp;
+                        <a href="{{ url_for('auth.approval_list', status='pending') }}" style="font-weight: 600;">
+                            <i class="fas fa-arrow-right"></i> View Pending
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center" style="padding: 3rem; color: var(--text-muted);">
+        <i class="fas fa-bell-slash" style="font-size: 2.5rem; margin-bottom: 0.75rem; display: block; opacity: 0.3;"></i>
+        <p>No notifications yet.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

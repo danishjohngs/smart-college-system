@@ -20,7 +20,7 @@ def list_courses():
     semester = request.args.get('semester', '')
     search = request.args.get('search', '')
 
-    query = Course.query
+    query = Course.query.filter_by(college_id=current_user.college_id)
 
     if department:
         query = query.filter_by(department=department)
@@ -36,7 +36,7 @@ def list_courses():
 
     courses = query.order_by(Course.code).all()
     departments = Student.DEPARTMENTS
-    faculty_list = Faculty.query.order_by(Faculty.name).all()
+    faculty_list = Faculty.query.filter_by(college_id=current_user.college_id).order_by(Faculty.name).all()
 
     return render_template('courses/list.html',
                            courses=courses,
@@ -50,11 +50,12 @@ def list_courses():
 @admin_required
 def add_course():
     """Add a new course."""
-    faculty_list = Faculty.query.order_by(Faculty.name).all()
+    faculty_list = Faculty.query.filter_by(college_id=current_user.college_id).order_by(Faculty.name).all()
 
     if request.method == 'POST':
         try:
             course = Course(
+                college_id=current_user.college_id,
                 code=request.form.get('code', '').strip().upper(),
                 name=request.form.get('name', '').strip(),
                 department=request.form.get('department', ''),
@@ -90,8 +91,8 @@ def add_course():
 @admin_required
 def edit_course(id):
     """Edit course details."""
-    course = Course.query.get_or_404(id)
-    faculty_list = Faculty.query.order_by(Faculty.name).all()
+    course = Course.query.filter_by(id=id, college_id=current_user.college_id).first_or_404()
+    faculty_list = Faculty.query.filter_by(college_id=current_user.college_id).order_by(Faculty.name).all()
 
     if request.method == 'POST':
         try:
@@ -124,7 +125,7 @@ def edit_course(id):
 @admin_required
 def delete_course(id):
     """Delete a course."""
-    course = Course.query.get_or_404(id)
+    course = Course.query.filter_by(id=id, college_id=current_user.college_id).first_or_404()
     try:
         db.session.delete(course)
         db.session.commit()

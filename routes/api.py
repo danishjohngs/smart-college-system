@@ -2,7 +2,7 @@
 API routes — JSON endpoints for Chart.js dashboards.
 """
 from flask import Blueprint, jsonify, request
-from flask_login import login_required
+from flask_login import login_required, current_user
 from extensions import db
 from models.student import Student
 from models.faculty import Faculty
@@ -19,15 +19,15 @@ api_bp = Blueprint('api', __name__)
 @login_required
 def dashboard_stats():
     """Return dashboard summary statistics as JSON."""
-    total_students = Student.query.filter_by(status='active').count()
-    total_faculty = Faculty.query.count()
-    total_courses = Course.query.count()
+    total_students = Student.query.filter_by(status='active', college_id=current_user.college_id).count()
+    total_faculty = Faculty.query.filter(Faculty.status != 'removed', Faculty.college_id == current_user.college_id).count()
+    total_courses = Course.query.filter_by(college_id=current_user.college_id).count()
 
     # Department counts
     departments = Student.DEPARTMENTS
     dept_data = {}
     for dept in departments:
-        dept_data[dept] = Student.query.filter_by(department=dept, status='active').count()
+        dept_data[dept] = Student.query.filter_by(department=dept, status='active', college_id=current_user.college_id).count()
 
     # Total attendance
     total_attendance = Attendance.query.count()
@@ -35,7 +35,7 @@ def dashboard_stats():
     attendance_rate = round((present_count / total_attendance * 100), 1) if total_attendance > 0 else 0
 
     # At-risk count
-    at_risk = Prediction.query.filter_by(prediction_type='performance', predicted_value=0).count()
+    at_risk = Prediction.query.filter_by(prediction_type='performance', predicted_value=0, college_id=current_user.college_id).count()
 
     return jsonify({
         'total_students': total_students,
@@ -51,7 +51,7 @@ def dashboard_stats():
 @login_required
 def attendance_chart(student_id):
     """Return attendance data for a specific student."""
-    student = Student.query.get_or_404(student_id)
+    student = Student.query.filter_by(id=student_id, college_id=current_user.college_id).first_or_404()
     courses = Course.query.filter_by(
         department=student.department,
         semester=student.semester
@@ -79,9 +79,9 @@ def grade_distribution():
     department = request.args.get('department', '')
     grade_counts = {'A+': 0, 'A': 0, 'B+': 0, 'B': 0, 'C+': 0, 'C': 0, 'D': 0, 'F': 0}
 
-    query = Grade.query
+    query = db.session.query(Grade).join(Student).filter(Student.college_id == current_user.college_id)
     if department:
-        student_ids = [s.id for s in Student.query.filter_by(department=department).all()]
+        student_ids = [s.id for s in Student.query.filter_by(department=department, college_id=current_user.college_id).all()]
         query = query.filter(Grade.student_id.in_(student_ids))
 
     for grade in query.all():
@@ -100,7 +100,7 @@ def admission_trends():
     """Return admission trend data for charts."""
     department = request.args.get('department', '')
 
-    query = AdmissionRecord.query.order_by(AdmissionRecord.year)
+    query = AdmissionRecord.query.filter_by(college_id=current_user.college_id).order_by(AdmissionRecord.year)
     if department:
         query = query.filter_by(department=department)
 
@@ -132,7 +132,7 @@ def department_stats():
     data = []
 
     for dept in departments:
-        students = Student.query.filter_by(department=dept, status='active').all()
+        students = Student.query.filter_by(department=dept, status='active', college_id=current_user.college_id).all()
         avg_cgpa = sum(s.cgpa for s in students) / len(students) if students else 0
 
         # Average attendance

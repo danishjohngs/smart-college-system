@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% block title %}Student History — {{ student.name }}{% endblock %}
+{% block page_title %}Student History{% endblock %}
+
+{% block content %}
+<!-- Back Button -->
+<div style="margin-bottom: 1rem;">
+    <a href="{{ url_for('history.index') }}" class="btn btn-sm btn-outline-secondary" style="color: #94a3b8; border-color: #475569;">
+        <i class="fas fa-arrow-left"></i> Back to History
+    </a>
+</div>
+
+<!-- Archived Record Banner -->
+<div style="margin-bottom: 1.5rem; padding: 0.6rem 1rem; background: rgba(100,116,139,0.1); border: 1px solid rgba(100,116,139,0.3); border-radius: var(--radius-sm); display: flex; align-items: center; gap: 0.75rem;">
+    <span class="badge" style="background: #475569; color: #e2e8f0; padding: 0.35rem 0.75rem; font-size: 0.8rem;">
+        <i class="fas fa-archive"></i> ARCHIVED RECORD
+    </span>
+    <span style="color: var(--text-muted); font-size: 0.85rem;">This student has been removed. All data below is read-only.</span>
+</div>
+
+<!-- Profile Card -->
+<div class="card mb-4" style="border-left: 4px solid #64748b;">
+    <div class="profile-header" style="opacity: 0.85;">
+        <div class="profile-avatar" style="background: rgba(100,116,139,0.2); color: #94a3b8;"><i class="fas fa-user-graduate"></i></div>
+        <div class="profile-info">
+            <h3 style="text-decoration: line-through; color: var(--text-muted);">{{ student.name }}</h3>
+            <p>{{ student.department }} | Semester {{ student.semester }} |
+               <span class="badge" style="background: #475569; color: #e2e8f0; font-size: 0.7rem;">Removed</span>
+            </p>
+            <div class="profile-meta">
+                <span><i class="fas fa-id-card"></i> {{ student.roll_number }}</span>
+                <span><i class="fas fa-envelope"></i> {{ student.email or 'N/A' }}</span>
+                <span><i class="fas fa-phone"></i> {{ student.phone or 'N/A' }}</span>
+                <span><i class="fas fa-calendar"></i> Admitted {{ student.admission_year or 'N/A' }}</span>
+                {% if student.removed_at %}
+                <span><i class="fas fa-calendar-times" style="color: #ef4444;"></i> Removed {{ student.removed_at.strftime('%d %b %Y') }}</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="profile-body">
+        <div class="stats-grid">
+            <div class="stat-card" style="border-left: 3px solid #64748b;">
+                <div class="stat-icon" style="background: rgba(100,116,139,0.15); color: #94a3b8;"><i class="fas fa-star"></i></div>
+                <div class="stat-info"><h3>{{ student.cgpa or '0.0' }}</h3><p>Last CGPA</p></div>
+            </div>
+            <div class="stat-card" style="border-left: 3px solid #64748b;">
+                <div class="stat-icon" style="background: rgba(100,116,139,0.15); color: #94a3b8;"><i class="fas fa-clipboard-check"></i></div>
+                <div class="stat-info"><h3>{{ attendance_pct }}%</h3><p>Attendance</p></div>
+            </div>
+            <div class="stat-card" style="border-left: 3px solid #64748b;">
+                <div class="stat-icon" style="background: rgba(100,116,139,0.15); color: #94a3b8;"><i class="fas fa-book"></i></div>
+                <div class="stat-info"><h3>{{ grade_records|length }}</h3><p>Graded Courses</p></div>
+            </div>
+            <div class="stat-card" style="border-left: 3px solid #64748b;">
+                <div class="stat-icon" style="background: rgba(100,116,139,0.15); color: #94a3b8;"><i class="fas fa-calendar-check"></i></div>
+                <div class="stat-info"><h3>{{ total_attendance }}</h3><p>Total Classes</p></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Course-wise Attendance History -->
+{% if course_attendance %}
+<div class="card mb-4" style="border-left: 4px solid #64748b;">
+    <div class="card-header" style="display: flex; align-items: center; gap: 0.5rem;">
+        <i class="fas fa-clipboard-check" style="color: #94a3b8;"></i>
+        Attendance History
+        <span class="badge" style="background: rgba(100,116,139,0.2); color: #94a3b8; font-size: 0.65rem; margin-left: auto;">READ-ONLY</span>
+    </div>
+    <div class="card-body">
+        <div class="table-container">
+            <table class="table" style="opacity: 0.85;">
+                <thead>
+                    <tr>
+                        <th>Course</th>
+                        <th>Total</th>
+                        <th>Present</th>
+                        <th>Absent</th>
+                        <th>Late</th>
+                        <th>Percentage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cid, data in course_attendance.items() %}
+                    <tr>
+                        <td>
+                            {% if data.course %}
+                            {{ data.course.code }} — {{ data.course.name }}
+                            {% else %}
+                            Course #{{ cid }} (Deleted)
+                            {% endif %}
+                        </td>
+                        <td>{{ data.total }}</td>
+                        <td style="color: #10b981;">{{ data.present }}</td>
+                        <td style="color: #ef4444;">{{ data.absent }}</td>
+                        <td style="color: #f59e0b;">{{ data.late }}</td>
+                        <td>
+                            <strong>{{ data.percentage }}%</strong>
+                            {% if data.percentage < 75 %}
+                            <span class="badge" style="background: rgba(239,68,68,0.15); color: #ef4444; font-size: 0.65rem; margin-left: 0.25rem;">Low</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Grade History -->
+{% if semester_grades %}
+<div class="card mb-4" style="border-left: 4px solid #64748b;">
+    <div class="card-header" style="display: flex; align-items: center; gap: 0.5rem;">
+        <i class="fas fa-chart-bar" style="color: #94a3b8;"></i>
+        Grade History
+        <span class="badge" style="background: rgba(100,116,139,0.2); color: #94a3b8; font-size: 0.65rem; margin-left: auto;">READ-ONLY</span>
+    </div>
+    <div class="card-body">
+        {% for sem, grades in semester_grades.items() %}
+        <h6 style="color: var(--text-secondary); margin-top: 1rem; margin-bottom: 0.5rem;">
+            <i class="fas fa-layer-group" style="color: #64748b;"></i> Semester {{ sem }}
+        </h6>
+        <div class="table-container">
+            <table class="table" style="opacity: 0.85;">
+                <thead>
+                    <tr>
+                        <th>Course</th>
+                        <th>Internal</th>
+                        <th>External</th>
+                        <th>Total</th>
+                        <th>Grade</th>
+                        <th>GP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for g in grades %}
+                    <tr>
+                        <td>
+                            {% if g.course %}
+                            {{ g.course.code }} — {{ g.course.name }}
+                            {% else %}
+                            Course (Deleted)
+                            {% endif %}
+                        </td>
+                        <td>{{ g.internal_marks }}</td>
+                        <td>{{ g.external_marks }}</td>
+                        <td><strong>{{ g.total_marks }}</strong></td>
+                        <td>
+                            <span class="badge-status badge-{% if g.grade in ['A+','A'] %}active{% elif g.grade == 'F' %}inactive{% else %}graduated{% endif %}">
+                                {{ g.grade }}
+                            </span>
+                        </td>
+                        <td>{{ g.grade_point }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+        <div style="margin-top: 1rem; padding: 0.5rem; background: rgba(100,116,139,0.1); border-radius: var(--radius-sm); text-align: center;">
+            <strong style="color: var(--text-secondary);">Final CGPA: {{ student.cgpa or '0.0' }}</strong>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- AI Prediction History -->
+{% if prediction_records %}
+<div class="card" style="border-left: 4px solid #64748b;">
+    <div class="card-header" style="display: flex; align-items: center; gap: 0.5rem;">
+        <i class="fas fa-brain" style="color: #94a3b8;"></i>
+        AI Prediction History
+        <span class="badge" style="background: rgba(100,116,139,0.2); color: #94a3b8; font-size: 0.65rem; margin-left: auto;">READ-ONLY</span>
+    </div>
+    <div class="card-body">
+        <div class="table-container">
+            <table class="table" style="opacity: 0.85;">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Prediction</th>
+                        <th>Confidence</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pred in prediction_records %}
+                    <tr>
+                        <td>{{ pred.created_at.strftime('%d %b %Y %H:%M') }}</td>
+                        <td>{{ pred.prediction_type|capitalize }}</td>
+                        <td>
+                            {% if pred.predicted_value == 0 %}
+                            <span style="color: #ef4444;"><i class="fas fa-exclamation-triangle"></i> At Risk</span>
+                            {% elif pred.predicted_value == 1 %}
+                            <span style="color: #f59e0b;">Average</span>
+                            {% elif pred.predicted_value == 2 %}
+                            <span style="color: #10b981;">Good</span>
+                            {% else %}
+                            <span style="color: #3b82f6;">Excellent</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ (pred.confidence * 100)|round(1) }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if not course_attendance and not semester_grades and not prediction_records %}
+<div class="card">
+    <div class="card-body" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+        <i class="fas fa-inbox" style="font-size: 2.5rem; opacity: 0.3; display: block; margin-bottom: 0.75rem;"></i>
+        <h5>No Academic Records</h5>
+        <p>This student has no attendance, grade, or prediction records in the archive.</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

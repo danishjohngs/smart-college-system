@@ -14,7 +14,7 @@ import joblib
 class PerformancePredictor:
     """Predicts student performance risk level using ML."""
 
-    def __init__(self):
+    def __init__(self, model_path=None):
         self.model = None
         self.risk_categories = {
             0: 'At Risk',
@@ -22,7 +22,7 @@ class PerformancePredictor:
             2: 'Good',
             3: 'Excellent'
         }
-        self.model_path = os.path.join(os.path.dirname(__file__), 'saved_models', 'performance_model.pkl')
+        self.model_path = model_path or os.path.join(os.path.dirname(__file__), 'saved_models', 'performance_model.pkl')
 
     def train(self, data):
         """
@@ -47,12 +47,12 @@ class PerformancePredictor:
 
         # Handle small datasets
         if len(df) < 10:
-            self.model = RandomForestClassifier(n_estimators=100, random_state=42)
+            self.model = RandomForestClassifier(n_estimators=50, random_state=42, n_jobs=1)
             self.model.fit(X, y)
             accuracy = 1.0
         else:
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-            self.model = RandomForestClassifier(n_estimators=100, random_state=42)
+            self.model = RandomForestClassifier(n_estimators=50, random_state=42, n_jobs=1)
             self.model.fit(X_train, y_train)
             predictions = self.model.predict(X_test)
             accuracy = accuracy_score(y_test, predictions)

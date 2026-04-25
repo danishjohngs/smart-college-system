@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+{% block title %}Registration Approvals — Smart College System{% endblock %}
+{% block page_title %}Registration Approvals{% endblock %}
+
+{% block content %}
+<!-- Header Stats -->
+<div class="stats-grid" style="margin-bottom: 1.5rem;">
+    <div class="stat-card yellow">
+        <div class="stat-icon yellow">
+            <i class="fas fa-clock"></i>
+        </div>
+        <div class="stat-info">
+            <h3>{{ pending_count }}</h3>
+            <p>Pending Approvals</p>
+        </div>
+    </div>
+</div>
+
+<!-- Role Context -->
+<div style="margin-bottom: 1rem; padding: 0.6rem 1rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.85rem; color: var(--text-secondary);">
+    {% if current_user.is_admin() %}
+        <i class="fas fa-shield-alt" style="color: var(--accent);"></i>
+        <strong>Admin View</strong> — You can approve faculty, admin, and student registrations.
+    {% elif current_user.is_faculty() %}
+        <i class="fas fa-chalkboard-teacher" style="color: var(--success);"></i>
+        <strong>Faculty View</strong> — You can approve student registrations from your department.
+    {% endif %}
+</div>
+
+<!-- Filter Tabs -->
+<div class="filter-bar" style="gap: 0.5rem; padding: 0.5rem;">
+    <a href="{{ url_for('auth.approval_list', status='pending') }}"
+       class="btn btn-sm {% if status_filter == 'pending' %}btn-warning{% else %}btn-outline-warning{% endif %}"
+       style="{% if status_filter != 'pending' %}color: #f59e0b; border-color: #f59e0b;{% endif %}">
+        <i class="fas fa-clock"></i> Pending
+        {% if pending_count > 0 %}<span class="badge bg-dark ms-1">{{ pending_count }}</span>{% endif %}
+    </a>
+    <a href="{{ url_for('auth.approval_list', status='approved') }}"
+       class="btn btn-sm {% if status_filter == 'approved' %}btn-success{% else %}btn-outline-success{% endif %}"
+       style="{% if status_filter != 'approved' %}color: #10b981; border-color: #10b981;{% endif %}">
+        <i class="fas fa-check-circle"></i> Approved
+    </a>
+    <a href="{{ url_for('auth.approval_list', status='rejected') }}"
+       class="btn btn-sm {% if status_filter == 'rejected' %}btn-danger{% else %}btn-outline-danger{% endif %}"
+       style="{% if status_filter != 'rejected' %}color: #ef4444; border-color: #ef4444;{% endif %}">
+        <i class="fas fa-times-circle"></i> Rejected
+    </a>
+    <a href="{{ url_for('auth.approval_list', status='all') }}"
+       class="btn btn-sm {% if status_filter == 'all' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+        <i class="fas fa-list"></i> All
+    </a>
+</div>
+
+<!-- Registrations Table -->
+<div class="table-container">
+    <div class="table-responsive">
+        <table class="table" id="approvalsTable">
+            <thead>
+                <tr>
+                    <th>Full Name</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Role</th>
+                    <th>Department</th>
+                    <th>ID Number</th>
+                    <th>Registered On</th>
+                    <th>Status</th>
+                    <th style="min-width: 200px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if registrations %}
+                    {% for user in registrations %}
+                    <tr>
+                        <td style="font-weight: 600; display: flex; align-items: center; gap: 0.75rem;">
+                            {% if user.profile_photo %}
+                                <img src="{{ url_for('static', filename='uploads/profiles/' + user.profile_photo) }}" 
+                                     alt="" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">
+                            {% else %}
+                                <div class="rounded-circle d-flex align-items-center justify-content-center" 
+                                     style="width: 40px; height: 40px; background: #64748b; color: white; font-size: 16px;">
+                                    {{ (user.full_name or user.username)[0]|upper }}
+                                </div>
+                            {% endif %}
+                            {{ user.full_name or '—' }}
+                        </td>
+                        <td><code style="background: rgba(59,130,246,0.1); color: #3b82f6; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.8rem;">{{ user.username }}</code></td>
+                        <td>{{ user.email }}</td>
+                        <td>{{ user.phone or '—' }}</td>
+                        <td>
+                            {% if user.role == 'student' %}
+                                <span class="badge-status" style="background: #dbeafe; color: #1d4ed8;">Student</span>
+                            {% elif user.role == 'faculty' %}
+                                <span class="badge-status" style="background: #d1fae5; color: #065f46;">Faculty</span>
+                            {% elif user.role == 'admin' %}
+                                <span class="badge-status" style="background: #fee2e2; color: #991b1b;">Admin</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ user.department or '—' }}</td>
+                        <td>{{ user.id_proof_number or '—' }}</td>
+                        <td>{{ user.created_at.strftime('%d %b %Y') if user.created_at else '—' }}</td>
+                        <td>
+                            {% if user.status == 'pending' %}
+                                <span class="badge-status" style="background: #fef3c7; color: #92400e;">
+                                    <i class="fas fa-clock"></i> Pending
+                                </span>
+                            {% elif user.status == 'approved' %}
+                                <span class="badge-status" style="background: #d1fae5; color: #065f46;">
+                                    <i class="fas fa-check-circle"></i> Approved
+                                </span>
+                            {% elif user.status == 'rejected' %}
+                                <span class="badge-status" style="background: #fee2e2; color: #991b1b;">
+                                    <i class="fas fa-times-circle"></i> Rejected
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.status == 'pending' %}
+                                <!-- Approve -->
+                                <form method="POST" action="{{ url_for('auth.approve_user', user_id=user.id) }}" style="display: inline;">
+                                    <button type="submit" class="btn btn-sm btn-success" title="Approve"
+                                            onclick="return confirm('Approve {{ user.full_name or user.username }}?')">
+                                        <i class="fas fa-check"></i> Approve
+                                    </button>
+                                </form>
+                                <!-- Reject toggle -->
+                                <button type="button" class="btn btn-sm btn-danger" title="Reject"
+                                        onclick="toggleRejectForm({{ user.id }})">
+                                    <i class="fas fa-times"></i> Reject
+                                </button>
+                                <!-- Reject reason form -->
+                                <div id="rejectForm-{{ user.id }}" style="display: none; margin-top: 0.5rem;">
+                                    <form method="POST" action="{{ url_for('auth.reject_user', user_id=user.id) }}">
+                                        <div class="input-group input-group-sm">
+                                            <input type="text" name="reason" class="form-control" placeholder="Rejection reason (optional)"
+                                                   style="font-size: 0.78rem;">
+                                            <button type="submit" class="btn btn-danger btn-sm"
+                                                    onclick="return confirm('Reject {{ user.full_name or user.username }}?')">
+                                                <i class="fas fa-paper-plane"></i>
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                                {% if current_user.is_admin() %}
+                                <form method="POST" action="{{ url_for('auth.delete_registration', user_id=user.id) }}" style="display:inline; margin-top: 0.4rem;">
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary" title="Delete Registration"
+                                            onclick="return confirm('Delete registration for {{ user.full_name or user.username }}? This frees their username and email.')"
+                                            style="font-size: 0.75rem;">
+                                        <i class="fas fa-trash-alt"></i> Delete
+                                    </button>
+                                </form>
+                                {% endif %}
+
+                            {% elif user.status == 'approved' %}
+                                {% if not user.is_admin() and current_user.is_admin() %}
+                                <button type="button" class="btn btn-sm btn-outline-danger" title="Revoke Access"
+                                        onclick="toggleRevokeForm({{ user.id }})" style="color: #ef4444; border-color: #ef4444;">
+                                    <i class="fas fa-ban"></i> Revoke
+                                </button>
+                                <div id="revokeForm-{{ user.id }}" style="display: none; margin-top: 0.5rem;">
+                                    <form method="POST" action="{{ url_for('auth.revoke_user', user_id=user.id) }}">
+                                        <div class="input-group input-group-sm">
+                                            <input type="text" name="reason" class="form-control" placeholder="Revocation reason (optional)"
+                                                   style="font-size: 0.78rem;">
+                                            <button type="submit" class="btn btn-danger btn-sm"
+                                                    onclick="return confirm('Revoke access for {{ user.full_name or user.username }}?')">
+                                                <i class="fas fa-paper-plane"></i>
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                                {% elif user.is_admin() %}
+                                <span style="color: var(--text-muted); font-size: 0.78rem;"><i class="fas fa-shield-alt"></i> Admin</span>
+                                {% endif %}
+
+                            {% elif user.status == 'rejected' %}
+                                <small style="color: #ef4444; font-size: 0.78rem;">
+                                    <i class="fas fa-info-circle"></i> {{ user.rejection_reason or 'No reason' }}
+                                </small>
+                                {% if current_user.is_admin() %}
+                                <form method="POST" action="{{ url_for('auth.delete_registration', user_id=user.id) }}" style="display:inline; margin-top: 0.4rem;">
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary" title="Delete Registration"
+                                            onclick="return confirm('Delete registration for {{ user.full_name or user.username }}? This frees their username and email.')"
+                                            style="font-size: 0.75rem;">
+                                        <i class="fas fa-trash-alt"></i> Delete
+                                    </button>
+                                </form>
+                                {% endif %}
+                            {% endif %}
+                            <br>
+                            <!-- View Details -->
+                            <button type="button" class="btn btn-sm btn-outline-info" title="View Details"
+                                    onclick="toggleDetails('details-{{ user.id }}')" style="font-size: 0.75rem; margin-top: 0.4rem;">
+                                <i class="fas fa-eye"></i> Details
+                            </button>
+                        </td>
+                    </tr>
+                    
+                    <!-- Expandable Details Row -->
+                    <tr id="details-{{ user.id }}" style="display: none; background: rgba(59,130,246,0.05);">
+                        <td colspan="10">
+                            <div class="p-3" style="border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                                <h6 style="color: var(--text-secondary); margin-bottom: 1rem;"><i class="fas fa-address-card"></i> Full Registration Details</h6>
+                                <div class="row g-3" style="font-size: 0.85rem; color: var(--text-primary);">
+                                    {% if user.role == 'student' %}
+                                    <div class="col-md-3"><strong>Gender:</strong><br> {{ user.gender or '—' }}</div>
+                                    <div class="col-md-3"><strong>DOB:</strong><br> {{ user.date_of_birth or '—' }}</div>
+                                    <div class="col-md-3"><strong>Semester:</strong><br> {{ user.semester or '—' }}</div>
+                                    <div class="col-md-3"><strong>Admission Year:</strong><br> {{ user.admission_year or '—' }}</div>
+                                    <div class="col-md-3"><strong>Graduation Year:</strong><br> {{ user.graduation_year or '—' }}</div>
+                                    <div class="col-md-3"><strong>Programme:</strong><br> {{ user.programme or '—' }}</div>
+                                    <div class="col-md-3"><strong>Blood Group:</strong><br> {{ user.blood_group or '—' }}</div>
+                                    <div class="col-md-3"><strong>Parent Name:</strong><br> {{ user.parent_name or '—' }}</div>
+                                    <div class="col-md-3"><strong>Parent Phone:</strong><br> {{ user.parent_phone or '—' }}</div>
+                                    <div class="col-md-12"><strong>Address:</strong><br> {{ user.address or '—' }}</div>
+                                    {% elif user.role == 'faculty' %}
+                                    <div class="col-md-3"><strong>Gender:</strong><br> {{ user.gender or '—' }}</div>
+                                    <div class="col-md-3"><strong>DOB:</strong><br> {{ user.date_of_birth or '—' }}</div>
+                                    <div class="col-md-3"><strong>Designation:</strong><br> {{ user.designation or '—' }}</div>
+                                    <div class="col-md-3"><strong>Qualification:</strong><br> {{ user.qualification or '—' }}</div>
+                                    <div class="col-md-3"><strong>Specialization:</strong><br> {{ user.specialization or '—' }}</div>
+                                    <div class="col-md-3"><strong>Experience:</strong><br> {{ user.years_of_experience or '0' }} years</div>
+                                    <div class="col-md-3"><strong>Date of Joining:</strong><br> {{ user.date_of_joining or '—' }}</div>
+                                    <div class="col-md-12"><strong>Address:</strong><br> {{ user.address or '—' }}</div>
+                                    {% elif user.role == 'admin' %}
+                                    <div class="col-md-3"><strong>College Name:</strong><br> {{ user.college_name or '—' }}</div>
+                                    <div class="col-md-3"><strong>College Location:</strong><br> {{ user.college_location or '—' }}</div>
+                                    <div class="col-md-3"><strong>Designation:</strong><br> {{ user.admin_designation or '—' }}</div>
+                                    <div class="col-md-3"><strong>Staff ID:</strong><br> {{ user.id_proof_number or '—' }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="10" class="text-center" style="padding: 3rem; color: var(--text-muted);">
+                            <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 0.75rem; display: block; opacity: 0.4;"></i>
+                            No {{ status_filter }} registrations found.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+function toggleRejectForm(userId) {
+    const el = document.getElementById('rejectForm-' + userId);
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+function toggleRevokeForm(userId) {
+    const el = document.getElementById('revokeForm-' + userId);
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+function toggleDetails(rowId) {
+    const el = document.getElementById(rowId);
+    el.style.display = el.style.display === 'none' ? 'table-row' : 'none';
+}
+</script>
+{% endblock %}

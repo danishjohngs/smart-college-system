@@ -11,6 +11,8 @@ from models.student import Student
 from models.admission import AdmissionRecord
 from models.attendance import Attendance
 from models.grade import Grade
+from ml.admission_predictor import AdmissionPredictor
+from ml.performance_predictor import PerformancePredictor
 
 predictions_bp = Blueprint('predictions', __name__)
 
@@ -29,7 +31,7 @@ def admission_prediction():
     error_message = None
 
     # Get historical data for charts
-    records = AdmissionRecord.query.order_by(AdmissionRecord.year).all()
+    records = AdmissionRecord.query.filter_by(college_id=current_user.college_id).order_by(AdmissionRecord.year).all()
     for r in records:
         historical_data.append({
             'year': r.year,
@@ -52,13 +54,15 @@ def admission_prediction():
                                        historical_data=json.dumps(historical_data))
 
             # Import and use admission predictor
-            from ml.admission_predictor import AdmissionPredictor
-            predictor = AdmissionPredictor()
-
-            # Train if model doesn't exist
+            print(f"[AI] Starting admission prediction for {department} ({year})...")
             model_path = os.path.join(os.path.dirname(os.path.dirname(__file__)),
-                                      'ml', 'saved_models', 'admission_model.pkl')
+                                      'ml', 'saved_models', f'admission_model_{current_user.college_id}.pkl')
+            encoder_path = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                                      'ml', 'saved_models', f'admission_encoder_{current_user.college_id}.pkl')
+            predictor = AdmissionPredictor(model_path=model_path, encoder_path=encoder_path)
+            
             if not os.path.exists(model_path):
+                print(f"[AI] Model not found at {model_path}. Training from scratch...")
                 # Train on historical data
                 training_data = []
                 for r in records:
@@ -69,14 +73,18 @@ def admission_prediction():
                         'admitted': r.students_admitted
                     })
                 if len(training_data) < 5:
+                    print(f"[AI] Not enough data to train ({len(training_data)} records).")
                     flash('Not enough historical data to train the model. Need at least 5 records.', 'warning')
                     return render_template('predictions/admission.html',
                                            departments=departments,
                                            historical_data=json.dumps(historical_data))
                 predictor.train(training_data)
+                print("[AI] Training complete.")
 
             # Make prediction
+            print("[AI] Loading model and generating result...")
             result = predictor.predict(year, department, applications)
+            print(f"[AI] Prediction successful: {result}")
 
             prediction_result = {
                 'year': year,
@@ -89,6 +97,7 @@ def admission_prediction():
             # Save prediction to database
             pred = Prediction(
                 prediction_type='admission',
+                college_id=current_user.college_id,
                 department=department,
                 predicted_value=result['predicted_admissions'],
                 confidence=result['confidence'],
@@ -122,7 +131,7 @@ def performance_prediction():
         flash('Access denied.', 'danger')
         return redirect(url_for('dashboard.index'))
 
-    students = Student.query.filter_by(status='active').order_by(Student.name).all()
+    students = Student.query.filter_by(status='active', college_id=current_user.college_id).order_by(Student.name).all()
     prediction_result = None
     all_predictions = []
     error_message = None
@@ -131,14 +140,22 @@ def performance_prediction():
         action = request.form.get('action', 'single')
 
         try:
-            from ml.performance_predictor import PerformancePredictor
-            predictor = PerformancePredictor()
-
-            # Train if model doesn't exist
+            print(f"[AI] Starting performance prediction for {current_user.college_id}...")
             model_path = os.path.join(os.path.dirname(os.path.dirname(__file__)),
-                                      'ml', 'saved_models', 'performance_model.pkl')
+                                       'ml', 'saved_models', f'performance_model_{current_user.college_id}.pkl')
+            predictor = PerformancePredictor(model_path=model_path)
+            
             if not os.path.exists(model_path):
-                _train_performance_model(predictor)
+                print(f"[AI] Performance model not found at {model_path}. Training...")
+                _train_performance_model(predictor, current_user.college_id)
+            
+            # Check again if training was successful
+            if not os.path.exists(model_path):
+                print("[AI] Performance model training failed or not enough data.")
+                flash('The prediction model is not trained yet and there is not enough student data (need at least 3 records) to train it automatically.', 'warning')
+                return render_template('predictions/performance.html', students=students)
+
+            print("[AI] Generating prediction...")
 
             if action == 'single':
                 student_id = request.form.get('student_id')
@@ -174,6 +191,7 @@ def performance_prediction():
                 # Save prediction
                 pred = Prediction(
                     prediction_type='performance',
+                    college_id=current_user.college_id,
                     student_id=student.id,
                     department=student.department,
                     predicted_value=float(result['category']),
@@ -211,6 +229,7 @@ def performance_prediction():
                     # Save prediction
                     pred = Prediction(
                         prediction_type='performance',
+                        college_id=current_user.college_id,
                         student_id=student.id,
                         department=student.department,
                         predicted_value=float(result['category']),
@@ -231,7 +250,7 @@ def performance_prediction():
             flash(f'Prediction error: {error_message}', 'danger')
 
     # Get at-risk students from recent predictions
-    at_risk = Prediction.query.filter_by(prediction_type='performance', predicted_value=0).all()
+    at_risk = Prediction.query.filter_by(prediction_type='performance', predicted_value=0, college_id=current_user.college_id).all()
     at_risk_students = []
     for pred in at_risk:
         if pred.student:
@@ -246,9 +265,9 @@ def performance_prediction():
                            error_message=error_message)
 
 
-def _train_performance_model(predictor):
+def _train_performance_model(predictor, college_id):
     """Train performance model from existing student data."""
-    students = Student.query.filter_by(status='active').all()
+    students = Student.query.filter_by(status='active', college_id=college_id).all()
     training_data = []
 
     for student in students:
@@ -274,8 +293,47 @@ def _train_performance_model(predictor):
             'category': category
         })
 
-    if len(training_data) >= 10:
+    if len(training_data) >= 3:
         predictor.train(training_data)
+
+
+@predictions_bp.route('/predictions/retrain', methods=['POST'])
+@login_required
+def retrain_models():
+    """Admin can manually retrain ML models when new data is added."""
+    if not current_user.is_admin():
+        flash('Access denied. Only admins can retrain models.', 'danger')
+        return redirect(url_for('dashboard.index'))
+
+    try:
+        # --- Retrain Admission Model ---
+        records = AdmissionRecord.query.filter_by(college_id=current_user.college_id).all()
+        training_data = [{
+            'year': r.year,
+            'department': r.department,
+            'applications': r.applications_received,
+            'admitted': r.students_admitted
+        } for r in records]
+
+        if len(training_data) >= 5:
+            model_path = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                                      'ml', 'saved_models', f'admission_model_{current_user.college_id}.pkl')
+            encoder_path = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                                        'ml', 'saved_models', f'admission_encoder_{current_user.college_id}.pkl')
+            predictor1 = AdmissionPredictor(model_path=model_path, encoder_path=encoder_path)
+            predictor1.train(training_data)
+
+        # --- Retrain Performance Model ---
+        model_path = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                                  'ml', 'saved_models', f'performance_model_{current_user.college_id}.pkl')
+        predictor2 = PerformancePredictor(model_path=model_path)
+        _train_performance_model(predictor2, current_user.college_id)
+
+        flash('AI models retrained successfully with latest data.', 'success')
+    except Exception as e:
+        flash(f'Error retraining models: {str(e)}', 'danger')
+
+    return redirect(url_for('predictions.admission_prediction'))
 
 
 @predictions_bp.route('/predictions/results')
@@ -284,7 +342,7 @@ def prediction_results():
     """View all prediction history."""
     pred_type = request.args.get('type', '')
 
-    query = Prediction.query
+    query = Prediction.query.filter_by(college_id=current_user.college_id)
 
     if pred_type:
         query = query.filter_by(prediction_type=pred_type)

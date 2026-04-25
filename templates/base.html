@@ -28,10 +28,20 @@
 
         <div class="sidebar-user">
             <div class="sidebar-user-avatar">
-                <i class="fas fa-user-circle"></i>
+                {% if current_user.profile_photo %}
+                    <img src="{{ url_for('static', filename='uploads/profiles/' + current_user.profile_photo) }}" 
+                         alt="Profile" 
+                         class="rounded-circle" 
+                         style="width: 42px; height: 42px; object-fit: cover; border: 2px solid rgba(255,255,255,0.2);">
+                {% else %}
+                    <div class="rounded-circle d-flex align-items-center justify-content-center" 
+                         style="width: 42px; height: 42px; background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; font-size: 18px; font-weight: 600;">
+                        {{ (current_user.full_name or current_user.username)[0]|upper }}
+                    </div>
+                {% endif %}
             </div>
             <div class="sidebar-user-info">
-                <span class="sidebar-user-name">{{ current_user.username }}</span>
+                <span class="sidebar-user-name">{{ current_user.full_name or current_user.username }}</span>
                 <span class="sidebar-user-role badge-role badge-{{ current_user.role }}">{{ current_user.role|capitalize }}</span>
             </div>
         </div>
@@ -116,12 +126,42 @@
             </li>
             {% endif %}
 
-            {% if current_user.is_admin() %}
-            <li class="sidebar-nav-header">Admin</li>
+            {% if current_user.is_admin() or current_user.is_faculty() %}
+            <li class="sidebar-nav-header">Administration</li>
             <li class="sidebar-nav-item">
-                <a href="{{ url_for('auth.register') }}" class="sidebar-nav-link {% if request.path == '/register' %}active{% endif %}">
+                <a href="{{ url_for('auth.approval_list') }}" class="sidebar-nav-link {% if request.path.startswith('/approvals') %}active{% endif %}">
+                    <i class="fas fa-user-check"></i>
+                    <span>Approvals
+                        {% if approval_pending_count > 0 %}
+                        <span class="badge bg-warning text-dark ms-1" style="font-size: 0.65rem; padding: 0.15rem 0.4rem;">{{ approval_pending_count }}</span>
+                        {% endif %}
+                    </span>
+                </a>
+            </li>
+            {% endif %}
+            {% if current_user.is_admin() or current_user.is_faculty() %}
+            <li class="sidebar-nav-item">
+                <a href="{{ url_for('removal.list_requests') }}" class="sidebar-nav-link {% if request.path.startswith('/removal-requests') %}active{% endif %}">
+                    <i class="fas fa-user-minus"></i>
+                    <span>Removal Requests
+                        {% if removal_pending_count > 0 %}
+                        <span class="badge bg-danger ms-1" style="font-size: 0.65rem; padding: 0.15rem 0.4rem;">{{ removal_pending_count }}</span>
+                        {% endif %}
+                    </span>
+                </a>
+            </li>
+            {% endif %}
+            {% if current_user.is_admin() %}
+            <li class="sidebar-nav-item">
+                <a href="{{ url_for('history.index') }}" class="sidebar-nav-link {% if request.path.startswith('/history') %}active{% endif %}">
+                    <i class="fas fa-archive"></i>
+                    <span>History</span>
+                </a>
+            </li>
+            <li class="sidebar-nav-item">
+                <a href="{{ url_for('auth.admin_register') }}" class="sidebar-nav-link {% if request.path.startswith('/admin/register') %}active{% endif %}">
                     <i class="fas fa-user-plus"></i>
-                    <span>Register User</span>
+                    <span>Create User</span>
                 </a>
             </li>
             {% endif %}
@@ -146,8 +186,24 @@
                 <h1 id="pageTitle">{% block page_title %}Dashboard{% endblock %}</h1>
             </div>
             <div class="navbar-right">
-                <span class="navbar-user">
-                    <i class="fas fa-user-circle"></i> {{ current_user.username }}
+                <!-- Notification Bell -->
+                <a href="{{ url_for('auth.notifications_list') }}" class="navbar-notification-bell" style="position: relative; color: var(--text-secondary); font-size: 1.1rem; margin-right: 0.75rem; text-decoration: none;">
+                    <i class="fas fa-bell"></i>
+                    {% if unread_notification_count > 0 %}
+                    <span style="position: absolute; top: -6px; right: -8px; background: #ef4444; color: white; font-size: 0.6rem; padding: 0.1rem 0.35rem; border-radius: 999px; font-weight: 700;">{{ unread_notification_count }}</span>
+                    {% endif %}
+                </a>
+                <span class="navbar-user d-flex align-items-center gap-2">
+                    {% if current_user.profile_photo %}
+                        <img src="{{ url_for('static', filename='uploads/profiles/' + current_user.profile_photo) }}" 
+                             alt="" class="rounded-circle" style="width: 32px; height: 32px; object-fit: cover;">
+                    {% else %}
+                        <div class="rounded-circle d-flex align-items-center justify-content-center" 
+                             style="width: 32px; height: 32px; background: #3b82f6; color: white; font-size: 13px; font-weight: 600;">
+                            {{ (current_user.full_name or current_user.username)[0]|upper }}
+                        </div>
+                    {% endif %}
+                    {{ current_user.full_name or current_user.username }}
                 </span>
             </div>
         </nav>
@@ -179,7 +235,7 @@
     </div>
 
     {% else %}
-    <!-- Public content (login/register) -->
+    <!-- Public content (login/register/setup) -->
     <div class="auth-wrapper">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}

@@ -18,7 +18,7 @@ def list_faculty():
     department = request.args.get('department', '')
     search = request.args.get('search', '')
 
-    query = Faculty.query
+    query = Faculty.query.filter(Faculty.status != 'removed', Faculty.college_id == current_user.college_id)
 
     if department:
         query = query.filter_by(department=department)
@@ -48,6 +48,7 @@ def add_faculty():
     if request.method == 'POST':
         try:
             fac = Faculty(
+                college_id=current_user.college_id,
                 name=request.form.get('name', '').strip(),
                 employee_id=request.form.get('employee_id', '').strip(),
                 email=request.form.get('email', '').strip(),
@@ -84,7 +85,7 @@ def add_faculty():
 @admin_required
 def edit_faculty(id):
     """Edit faculty details."""
-    fac = Faculty.query.get_or_404(id)
+    fac = Faculty.query.filter_by(id=id, college_id=current_user.college_id).first_or_404()
 
     if request.method == 'POST':
         try:
@@ -117,13 +118,39 @@ def edit_faculty(id):
 @login_required
 @admin_required
 def delete_faculty(id):
-    """Delete a faculty member."""
-    fac = Faculty.query.get_or_404(id)
+    """Archive a faculty member — mark as removed, delete user account."""
+    fac = Faculty.query.filter_by(id=id, college_id=current_user.college_id).first_or_404()
+    faculty_name = fac.name
+    user_id = fac.user_id
+
     try:
-        db.session.delete(fac)
+        from datetime import datetime
+
+        # 1. Mark faculty as 'removed'
+        fac.status = 'removed'
+        fac.removed_at = datetime.utcnow()
+        fac.user_id = None  # Unlink from user account
+
+        # 2. Unlink courses (set faculty_id to NULL — don't delete courses)
+        from models.course import Course
+        Course.query.filter_by(faculty_id=fac.id).update({'faculty_id': None})
+
+        # 3. Delete ONLY the User account
+        if user_id:
+            from models.notification import Notification
+            Notification.query.filter_by(recipient_id=user_id).delete()
+            Notification.query.filter_by(related_user_id=user_id).delete()
+
+            from models.user import User
+            user = User.query.get(user_id)
+            if user:
+                db.session.delete(user)
+
         db.session.commit()
-        flash(f'Faculty "{fac.name}" deleted successfully.', 'success')
+        flash(f'Faculty "{faculty_name}" has been removed. Records are preserved in History.', 'success')
+
     except Exception as e:
         db.session.rollback()
         flash(f'Error: {str(e)}', 'danger')
+
     return redirect(url_for('faculty.list_faculty'))

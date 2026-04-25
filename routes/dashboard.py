@@ -10,6 +10,7 @@ from models.course import Course
 from models.attendance import Attendance
 from models.grade import Grade
 from models.prediction import Prediction
+from models.college import College
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
@@ -33,28 +34,39 @@ def admin_dashboard():
     if not current_user.is_admin():
         return redirect(url_for('dashboard.index'))
 
-    total_students = Student.query.filter_by(status='active').count()
-    total_faculty = Faculty.query.count()
-    total_courses = Course.query.count()
+    college = College.query.get(current_user.college_id) if current_user.college_id else None
+
+    total_students = Student.query.filter_by(status='active', college_id=current_user.college_id).count()
+    total_faculty = Faculty.query.filter(Faculty.status != 'removed', Faculty.college_id == current_user.college_id).count()
+    total_courses = Course.query.filter_by(college_id=current_user.college_id).count()
 
     # Department-wise student count
     departments = ['Computer Science', 'Electronics', 'Mechanical', 'Electrical', 'Civil']
     dept_counts = {}
     for dept in departments:
-        dept_counts[dept] = Student.query.filter_by(department=dept, status='active').count()
+        dept_counts[dept] = Student.query.filter_by(department=dept, status='active', college_id=current_user.college_id).count()
 
     # At-risk students (predicted performance category = 0)
-    at_risk_count = Prediction.query.filter_by(prediction_type='performance', predicted_value=0).count()
+    # Using a join or filtering predictions where student is in this college.
+    # A simple way: join Student
+    at_risk_count = db.session.query(Prediction).join(Student).filter(
+        Prediction.prediction_type == 'performance',
+        Prediction.predicted_value == 0,
+        Student.college_id == current_user.college_id
+    ).count()
 
     # Recent predictions
-    recent_predictions = Prediction.query.order_by(Prediction.created_at.desc()).limit(5).all()
+    recent_predictions = db.session.query(Prediction).join(Student).filter(
+        Student.college_id == current_user.college_id
+    ).order_by(Prediction.created_at.desc()).limit(5).all()
 
     # Attendance stats
-    total_attendance = Attendance.query.count()
-    present_count = Attendance.query.filter_by(status='present').count()
+    total_attendance = db.session.query(Attendance).join(Student).filter(Student.college_id == current_user.college_id).count()
+    present_count = db.session.query(Attendance).join(Student).filter(Student.college_id == current_user.college_id, Attendance.status == 'present').count()
     attendance_rate = round((present_count / total_attendance * 100), 1) if total_attendance > 0 else 0
 
     return render_template('dashboard/admin_dashboard.html',
+                           college=college,
                            total_students=total_students,
                            total_faculty=total_faculty,
                            total_courses=total_courses,
@@ -71,23 +83,25 @@ def faculty_dashboard():
     if not (current_user.is_faculty() or current_user.is_admin()):
         return redirect(url_for('dashboard.index'))
 
+    college = College.query.get(current_user.college_id) if current_user.college_id else None
     faculty = Faculty.query.filter_by(user_id=current_user.id).first()
     courses = []
     my_students_count = 0
 
     if faculty:
         courses = Course.query.filter_by(faculty_id=faculty.id).all()
-        # Count unique students in faculty's courses via attendance
-        student_ids = set()
-        for course in courses:
-            for att in course.attendances:
-                student_ids.add(att.student_id)
-        my_students_count = len(student_ids)
+        # Count active students in the faculty's department
+        my_students_count = Student.query.filter_by(
+            status='active',
+            department=faculty.department,
+            college_id=current_user.college_id
+        ).count()
 
-    total_students = Student.query.filter_by(status='active').count()
-    total_courses = Course.query.count()
+    total_students = Student.query.filter_by(status='active', college_id=current_user.college_id).count()
+    total_courses = Course.query.filter_by(college_id=current_user.college_id).count()
 
     return render_template('dashboard/faculty_dashboard.html',
+                           college=college,
                            faculty=faculty,
                            courses=courses,
                            my_students_count=my_students_count,
@@ -102,6 +116,7 @@ def student_dashboard():
     if not (current_user.is_student() or current_user.is_admin()):
         return redirect(url_for('dashboard.index'))
 
+    college = College.query.get(current_user.college_id) if current_user.college_id else None
     student = Student.query.filter_by(user_id=current_user.id).first()
     attendance_pct = 0
     grades = []
@@ -115,6 +130,7 @@ def student_dashboard():
         ).order_by(Prediction.created_at.desc()).limit(5).all()
 
     return render_template('dashboard/student_dashboard.html',
+                           college=college,
                            student=student,
                            attendance_pct=attendance_pct,
                            grades=grades,

@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from app import create_app
 from extensions import db
+from models.college import College
 from models.user import User
 from models.student import Student
 from models.faculty import Faculty
@@ -56,7 +57,10 @@ FACULTY_NAMES = [
     ('Dr. Ramesh', 'Kumar'), ('Dr. Sunita', 'Sharma'), ('Prof. Anil', 'Verma'),
     ('Dr. Priya', 'Nair'), ('Prof. Suresh', 'Patel'), ('Dr. Kavitha', 'Reddy'),
     ('Prof. Rajesh', 'Gupta'), ('Dr. Meena', 'Iyer'), ('Prof. Vikram', 'Singh'),
-    ('Dr. Lakshmi', 'Menon'), ('Prof. Gopal', 'Joshi'), ('Dr. Deepa', 'Rao')
+    ('Dr. Lakshmi', 'Menon'), ('Prof. Gopal', 'Joshi'), ('Dr. Deepa', 'Rao'),
+    ('Dr. Arindam', 'Bose'), ('Prof. Shweta', 'Mishra'), ('Dr. Rahul', 'Sen'),
+    ('Prof. Ananya', 'Desai'), ('Dr. Harish', 'Thakur'), ('Prof. Sneha', 'Dey'),
+    ('Dr. Ajay', 'Chatterjee'), ('Prof. Divya', 'Pillai')
 ]
 
 DESIGNATIONS = [
@@ -123,86 +127,110 @@ def seed():
         print("\n[1/8] Resetting database...")
         db.drop_all()
         db.create_all()
-        print("  ✓ Database tables created.")
+        print("  OK Database tables created.")
+
+        # --- ADMIN USER & DEMO COLLEGE ---
+        print("\n[1.5/8] Creating Admin User and Demo College...")
+        # Create admin user first (no college assigned yet)
+        admin_user = User(
+            username='admin',
+            email='smartcollegeai@gmail.com',
+            role='admin',
+            status='approved',
+            full_name='System Admin'
+        )
+        admin_user.set_password('admin123')
+        db.session.add(admin_user)
+        db.session.commit()
+
+        # Create Demo College authored by admin
+        college = College(name='Demo College', location='Virtual', college_code='DEMO123', created_by=admin_user.id)
+        db.session.add(college)
+        db.session.commit()
+
+        # Assign college to admin
+        admin_user.college_id = college.id
+        db.session.commit()
+        print(f"  OK Demo college created with code: {college.college_code}")
 
         # --- USERS ---
         print("\n[2/8] Creating users...")
-        users = create_users()
-        print(f"  ✓ {len(users)} users created.")
+        users = create_users(college.id)
+        print(f"  OK {len(users)} users created.")
 
         # --- FACULTY ---
         print("\n[3/8] Creating faculty...")
-        faculty_list = create_faculty(users)
-        print(f"  ✓ {len(faculty_list)} faculty members created.")
+        faculty_list = create_faculty(users, college.id)
+        print(f"  OK {len(faculty_list)} faculty members created.")
 
         # --- STUDENTS ---
         print("\n[4/8] Creating students...")
-        student_list = create_students(users)
-        print(f"  ✓ {len(student_list)} students created.")
+        student_list = create_students(users, college.id)
+        print(f"  OK {len(student_list)} students created.")
 
         # --- COURSES ---
         print("\n[5/8] Creating courses...")
-        course_list = create_courses(faculty_list)
-        print(f"  ✓ {len(course_list)} courses created.")
+        course_list = create_courses(faculty_list, college.id)
+        print(f"  OK {len(course_list)} courses created.")
 
         # --- ATTENDANCE ---
         print("\n[6/8] Creating attendance records...")
         att_count = create_attendance(student_list, course_list, faculty_list)
-        print(f"  ✓ {att_count} attendance records created.")
+        print(f"  OK {att_count} attendance records created.")
 
         # --- GRADES ---
         print("\n[7/8] Creating grade records...")
         grade_count = create_grades(student_list, course_list)
-        print(f"  ✓ {grade_count} grade records created.")
+        print(f"  OK {grade_count} grade records created.")
 
         # --- ADMISSION RECORDS ---
         print("\n[8/8] Creating admission history (10 years)...")
-        adm_count = create_admission_records()
-        print(f"  ✓ {adm_count} admission records created.")
+        adm_count = create_admission_records(college.id)
+        print(f"  OK {adm_count} admission records created.")
 
         # --- TRAIN ML MODELS ---
         print("\n" + "=" * 60)
         print("  Training ML Models...")
         print("=" * 60)
-        train_models()
+        train_models(college.id)
 
         print("\n" + "=" * 60)
-        print("  ✅ Seed data complete!")
+        print("  Seed data complete!")
         print("=" * 60)
-        print("\n  Default Login:")
-        print("  Username: admin")
-        print("  Password: admin123")
         print("\n  Run: python app.py")
         print("  Open: http://localhost:5000")
+        print("  Credentials are in seed_data.py (developer reference only)")
         print("=" * 60)
 
 
-def create_users():
+def create_users(college_id):
     """Create admin, faculty, and student user accounts."""
     users = []
 
-    # Admin user
-    admin = User(username='admin', email='admin@smartcollege.edu', role='admin')
-    admin.set_password('admin123')
-    db.session.add(admin)
-    users.append(('admin', admin))
+    # Admin user is now created via the /setup page
+
 
     # Faculty users
-    for i in range(5):
+    for i in range(len(FACULTY_NAMES)):
         fname = FACULTY_NAMES[i][0].replace('Dr. ', '').replace('Prof. ', '').lower()
         lname = FACULTY_NAMES[i][1].lower()
         username = f'{fname}.{lname}'
+        dept = DEPARTMENTS[i % len(DEPARTMENTS)]
         user = User(
             username=username,
-            email=f'{username}@smartcollege.edu',
-            role='faculty'
+            email=f'{username}.demo@localhost',
+            role='faculty',
+            status='approved',
+            full_name=f'{FACULTY_NAMES[i][0]} {FACULTY_NAMES[i][1]}',
+            department=dept,
+            college_id=college_id
         )
         user.set_password('faculty123')
         db.session.add(user)
         users.append(('faculty', user))
 
     # Student users
-    for i in range(20):
+    for i in range(50):
         gender = random.choice(['Male', 'Female'])
         if gender == 'Male':
             fname = random.choice(MALE_FIRST_NAMES).lower()
@@ -217,18 +245,39 @@ def create_users():
 
         user = User(
             username=username,
-            email=f'{username}@student.smartcollege.edu',
-            role='student'
+            email=f'{username}.demo@localhost',
+            role='student',
+            status='approved',
+            full_name=f'{fname.capitalize()} {lname.capitalize()}',
+            college_id=college_id
         )
         user.set_password('student123')
         db.session.add(user)
         users.append(('student', user))
 
     db.session.commit()
+
+    # --- Sample pending/rejected users for demo ---
+    pending_users_data = [
+        User(full_name='Vikram Desai', username='vikram.desai', email='vikram@test.com',
+             role='student', department='Computer Science', id_proof_number='CS2026099',
+             phone='9876500001', status='pending', college_id=college_id),
+        User(full_name='Sneha Kapoor', username='sneha.kapoor', email='sneha@test.com',
+             role='faculty', department='Electronics', id_proof_number='FAC2026005',
+             phone='9876500002', status='pending', college_id=college_id),
+        User(full_name='Rejected User', username='rejected.user', email='rejected@test.com',
+             role='student', department='Mechanical', id_proof_number='ME2026050',
+             phone='9876500003', status='rejected', rejection_reason='Invalid college ID provided', college_id=college_id),
+    ]
+    for u in pending_users_data:
+        u.set_password('test123')
+        db.session.add(u)
+
+    db.session.commit()
     return users
 
 
-def create_faculty(users):
+def create_faculty(users, college_id):
     """Create faculty records linked to user accounts."""
     faculty_list = []
     faculty_users = [u for r, u in users if r == 'faculty']
@@ -242,11 +291,12 @@ def create_faculty(users):
             user_id=user_id,
             name=name,
             employee_id=f'FAC{2020 + i:04d}',
-            email=f'{first.split()[-1].lower()}.{last.lower()}@smartcollege.edu',
+            email=f'{first.split()[-1].lower()}.{last.lower()}.demo@localhost',
             phone=f'+91 {random.randint(7000000000, 9999999999)}',
             department=dept,
             designation=random.choice(DESIGNATIONS),
-            qualification=QUALIFICATIONS[i % len(QUALIFICATIONS)]
+            qualification=QUALIFICATIONS[i % len(QUALIFICATIONS)],
+            college_id=college_id
         )
         db.session.add(fac)
         faculty_list.append(fac)
@@ -255,13 +305,13 @@ def create_faculty(users):
     return faculty_list
 
 
-def create_students(users):
+def create_students(users, college_id):
     """Create 55 student records with realistic data."""
     student_list = []
     student_users = [u for r, u in users if r == 'student']
     student_user_idx = 0
 
-    for i in range(55):
+    for i in range(100):
         gender = random.choice(['Male', 'Female'])
         if gender == 'Male':
             first_name = random.choice(MALE_FIRST_NAMES)
@@ -286,7 +336,7 @@ def create_students(users):
             user_id=user_id,
             name=name,
             roll_number=f'{dept[:2].upper()}{admission_year}{i + 1:03d}',
-            email=f'{first_name.lower()}.{last_name.lower()}{i}@student.smartcollege.edu',
+            email=f'{first_name.lower()}.{last_name.lower()}{i}.demo@localhost',
             phone=f'+91 {random.randint(7000000000, 9999999999)}',
             department=dept,
             semester=semester,
@@ -295,7 +345,8 @@ def create_students(users):
             gender=gender,
             address=random.choice(ADDRESSES),
             cgpa=0.0,
-            status='active'
+            status='active',
+            college_id=college_id
         )
         db.session.add(student)
         student_list.append(student)
@@ -304,7 +355,7 @@ def create_students(users):
     return student_list
 
 
-def create_courses(faculty_list):
+def create_courses(faculty_list, college_id):
     """Create courses and assign faculty."""
     course_list = []
 
@@ -319,7 +370,8 @@ def create_courses(faculty_list):
             department=dept,
             semester=semester,
             credits=credits,
-            faculty_id=faculty_id
+            faculty_id=faculty_id,
+            college_id=college_id
         )
         db.session.add(course)
         course_list.append(course)
@@ -437,7 +489,7 @@ def create_grades(student_list, course_list):
     return count
 
 
-def create_admission_records():
+def create_admission_records(college_id):
     """Create 10 years of admission history for AI training."""
     count = 0
 
@@ -460,7 +512,8 @@ def create_admission_records():
                 department=dept,
                 applications_received=applications,
                 students_admitted=admitted,
-                total_capacity=capacity
+                total_capacity=capacity,
+                college_id=college_id
             )
             db.session.add(record)
             count += 1
@@ -469,7 +522,7 @@ def create_admission_records():
     return count
 
 
-def train_models():
+def train_models(college_id):
     """Train ML models after seeding data."""
     try:
         from ml.admission_predictor import AdmissionPredictor
@@ -485,7 +538,9 @@ def train_models():
             'admitted': r.students_admitted
         } for r in records]
 
-        predictor = AdmissionPredictor()
+        model_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'ml', 'saved_models', f'admission_model_{college_id}.pkl')
+        encoder_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'ml', 'saved_models', f'admission_encoder_{college_id}.pkl')
+        predictor = AdmissionPredictor(model_path=model_path, encoder_path=encoder_path)
         score = predictor.train(training_data)
         print(f"    ✓ R² Score: {score:.4f} ({len(training_data)} samples)")
 
@@ -515,7 +570,8 @@ def train_models():
                 'category': cat
             })
 
-        predictor2 = PerformancePredictor()
+        model_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'ml', 'saved_models', f'performance_model_{college_id}.pkl')
+        predictor2 = PerformancePredictor(model_path=model_path)
         accuracy = predictor2.train(perf_data)
         print(f"    ✓ Accuracy: {accuracy:.4f} ({len(perf_data)} samples)")
 

@@ -39,7 +39,24 @@
             <tr>
                 <td>{{ loop.index }}</td>
                 <td><strong>{{ fac.employee_id }}</strong></td>
-                <td>{{ fac.name }}</td>
+                <td>
+                    <div class="d-flex align-items-center gap-2">
+                        {% set fac_user = None %}
+                        {% if fac.user_id %}
+                            {% set fac_user = fac.user %}
+                        {% endif %}
+                        {% if fac_user and fac_user.profile_photo %}
+                            <img src="{{ url_for('static', filename='uploads/profiles/' + fac_user.profile_photo) }}" 
+                                 alt="" class="rounded-circle" style="width: 36px; height: 36px; object-fit: cover;">
+                        {% else %}
+                            <div class="rounded-circle d-flex align-items-center justify-content-center" 
+                                 style="width: 36px; height: 36px; background: #10b981; color: white; font-size: 14px; font-weight: 600;">
+                                {{ fac.name[0]|upper }}
+                            </div>
+                        {% endif %}
+                        <div class="fw-semibold">{{ fac.name }}</div>
+                    </div>
+                </td>
                 <td>{{ fac.department }}</td>
                 <td>{{ fac.designation or 'N/A' }}</td>
                 <td>{{ fac.email or 'N/A' }}</td>
@@ -48,7 +65,10 @@
                         {% if current_user.is_admin() %}
                         <a href="{{ url_for('faculty.edit_faculty', id=fac.id) }}" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i></a>
                         <form method="POST" action="{{ url_for('faculty.delete_faculty', id=fac.id) }}" style="display:inline;" id="delFac{{ fac.id }}">
-                            <button type="button" class="btn btn-sm btn-danger" onclick="confirmDelete('{{ fac.name }}', 'delFac{{ fac.id }}')"><i class="fas fa-trash"></i></button>
+                            <button type="submit" class="btn btn-sm btn-danger" title="Remove & Archive"
+                                    onclick="return confirm('This will archive {{ fac.name }}. Their records will be preserved in History. Continue?')">
+                                <i class="fas fa-archive"></i>
+                            </button>
                         </form>
                         {% endif %}
                     </div>

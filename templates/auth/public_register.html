@@ -1,0 +1,393 @@
+{% extends "base.html" %}
+{% block title %}Register — Smart College System{% endblock %}
+
+{% block auth_content %}
+<div class="auth-card" style="max-width: 520px;">
+    <div class="auth-logo">
+        <i class="fas fa-user-plus"></i>
+        <h2>Create Your Account</h2>
+        <p>Smart College Management System</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('auth.public_register') }}" id="publicRegisterForm" enctype="multipart/form-data" novalidate>
+        <!-- Full Name -->
+        <div class="mb-3">
+            <label class="form-label" for="full_name">Full Name</label>
+            <input type="text" class="form-control" id="full_name" name="full_name"
+                   placeholder="Enter your full name" required minlength="2">
+        </div>
+
+        <!-- Profile Photo -->
+        <div class="mb-3">
+            <label class="form-label" for="profile_photo">Profile Photo (Optional)</label>
+            <input type="file" class="form-control" id="profile_photo" name="profile_photo" accept=".png,.jpg,.jpeg,.gif,.webp">
+        </div>
+
+        <!-- Username & Email -->
+        <div class="row g-3 mb-3">
+            <div class="col-sm-6">
+                <label class="form-label" for="username">Username</label>
+                <input type="text" class="form-control" id="username" name="username"
+                       placeholder="Choose a username" required minlength="3">
+            </div>
+            <div class="col-sm-6">
+                <label class="form-label" for="email">Email Address</label>
+                <input type="email" class="form-control" id="email" name="email"
+                       placeholder="your@email.com" required>
+            </div>
+        </div>
+
+        <!-- Phone, Gender, DOB -->
+        <div class="row g-3 mb-3">
+            <div class="col-sm-4">
+                <label class="form-label" for="phone">Phone Number</label>
+                <input type="tel" class="form-control" id="phone" name="phone"
+                       placeholder="Enter your phone number" required minlength="10">
+            </div>
+            <div class="col-sm-4">
+                <label class="form-label" for="gender">Gender <span class="text-danger">*</span></label>
+                <select name="gender" id="gender" class="form-select" required>
+                    <option value="" disabled selected>Select</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="col-sm-4">
+                <label class="form-label" for="date_of_birth">Date of Birth <span class="text-danger">*</span></label>
+                <input type="date" name="date_of_birth" id="date_of_birth" class="form-control" required>
+            </div>
+        </div>
+
+        <!-- Password & Confirm -->
+        <div class="row g-3 mb-3">
+            <div class="col-sm-6">
+                <label class="form-label" for="password">Password</label>
+                <input type="password" class="form-control" id="password" name="password"
+                       placeholder="Min 8 characters" required minlength="8">
+            </div>
+            <div class="col-sm-6">
+                <label class="form-label" for="confirm_password">Confirm Password</label>
+                <input type="password" class="form-control" id="confirm_password" name="confirm_password"
+                       placeholder="Re-enter password" required>
+            </div>
+        </div>
+
+        <!-- Password Strength Indicator -->
+        <div class="mb-3">
+            <div style="height: 4px; background: rgba(255,255,255,0.1); border-radius: 999px; overflow: hidden; margin-bottom: 0.25rem;">
+                <div id="strengthFill" style="height: 100%; width: 0; border-radius: 999px; transition: width 0.3s ease, background 0.3s ease;"></div>
+            </div>
+            <small id="strengthText" style="font-size: 0.72rem; font-weight: 500;"></small>
+        </div>
+
+        <!-- Role Selection -->
+        <div class="mb-3">
+            <label class="form-label" for="roleSelect">Register As</label>
+            <select name="role" id="roleSelect" class="form-select" required onchange="toggleRoleFields()">
+                <option value="" selected disabled>Select your role</option>
+                <option value="admin">Admin</option>
+                <option value="faculty">Faculty</option>
+                <option value="student">Student</option>
+            </select>
+        </div>
+
+        <!-- ADMIN FIELDS (hidden by default) -->
+        <div id="adminFields" style="display: none;">
+            <hr class="my-3">
+            <h6 class="text-muted mb-3"><i class="fas fa-shield-alt"></i> Administrator Details</h6>
+            
+            <div class="mb-3">
+                <label class="form-label">College Name <span class="text-danger">*</span></label>
+                <input type="text" name="college_name" class="form-control" placeholder="e.g., St Benedict Academy">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">College Location <span class="text-danger">*</span></label>
+                <input type="text" name="college_location" class="form-control" placeholder="e.g., Thiruvananthapuram, Kerala">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">College Website</label>
+                <input type="url" name="website" class="form-control" placeholder="e.g., https://www.college.edu (optional)">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Designation <span class="text-danger">*</span></label>
+                <input type="text" name="admin_designation" class="form-control" placeholder="e.g., Principal, HOD, Office Administrator">
+            </div>
+        </div>
+
+        <!-- FACULTY FIELDS (hidden by default) -->
+        <div id="facultyFields" style="display: none;">
+            <hr class="my-3">
+            <h6 class="text-muted mb-3"><i class="fas fa-chalkboard-teacher"></i> Faculty Details</h6>
+            
+            <div class="mb-3">
+                <label class="form-label">College Code <span class="text-danger">*</span></label>
+                <input type="text" name="college_code" class="form-control" placeholder="Enter the unique code provided by your college administrator">
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Department <span class="text-danger">*</span></label>
+                    <select name="department" class="form-select">
+                        <option value="" disabled selected>Select department</option>
+                        <option value="Computer Science">Computer Science</option>
+                        <option value="Electronics">Electronics</option>
+                        <option value="Mechanical">Mechanical</option>
+                        <option value="Electrical">Electrical</option>
+                        <option value="Civil">Civil</option>
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Employee ID <span class="text-danger">*</span></label>
+                    <input type="text" name="employee_id" class="form-control" placeholder="College employee ID">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Years of Experience <span class="text-danger">*</span></label>
+                    <input type="number" name="years_of_experience" class="form-control" min="0" max="50" placeholder="e.g., 5">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Designation <span class="text-danger">*</span></label>
+                    <input type="text" name="designation" class="form-control" placeholder="e.g., Assistant Professor">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Highest Qualification <span class="text-danger">*</span></label>
+                    <input type="text" name="qualification" class="form-control" placeholder="e.g., M.Tech, PhD, MCA">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Specialization</label>
+                    <input type="text" name="specialization" class="form-control" placeholder="e.g., Machine Learning (optional)">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Date of Joining</label>
+                    <input type="date" name="date_of_joining" class="form-control">
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Address</label>
+                <textarea name="address" class="form-control" rows="2" placeholder="Full address (optional)"></textarea>
+            </div>
+        </div>
+
+        <!-- STUDENT FIELDS (hidden by default) -->
+        <div id="studentFields" style="display: none;">
+            <hr class="my-3">
+            <h6 class="text-muted mb-3"><i class="fas fa-user-graduate"></i> Student Details</h6>
+            
+            <div class="mb-3">
+                <label class="form-label">College Code <span class="text-danger">*</span></label>
+                <input type="text" name="college_code" class="form-control" placeholder="Enter the unique code provided by your college">
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Department <span class="text-danger">*</span></label>
+                    <select name="department" class="form-select">
+                        <option value="" disabled selected>Select department</option>
+                        <option value="Computer Science">Computer Science</option>
+                        <option value="Electronics">Electronics</option>
+                        <option value="Mechanical">Mechanical</option>
+                        <option value="Electrical">Electrical</option>
+                        <option value="Civil">Civil</option>
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Admission No / Roll Number <span class="text-danger">*</span></label>
+                    <input type="text" name="roll_number" class="form-control" placeholder="e.g., CS2024001">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Current Semester <span class="text-danger">*</span></label>
+                    <input type="number" name="semester" class="form-control" min="1" max="8" placeholder="e.g., 3">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Batch / Admission Year <span class="text-danger">*</span></label>
+                    <input type="number" name="admission_year" class="form-control" min="2015" max="2030" placeholder="e.g., 2024">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Expected Graduation Year <span class="text-danger">*</span></label>
+                    <input type="number" name="graduation_year" class="form-control" min="2020" max="2035" placeholder="e.g., 2027">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Programme <span class="text-danger">*</span></label>
+                    <input type="text" name="programme" class="form-control" placeholder="e.g., BCA, B.Tech CSE">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Blood Group</label>
+                    <select name="blood_group" class="form-select">
+                        <option value="" selected>Select (optional)</option>
+                        <option value="A+">A+</option>
+                        <option value="A-">A-</option>
+                        <option value="B+">B+</option>
+                        <option value="B-">B-</option>
+                        <option value="AB+">AB+</option>
+                        <option value="AB-">AB-</option>
+                        <option value="O+">O+</option>
+                        <option value="O-">O-</option>
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Parent/Guardian Name <span class="text-danger">*</span></label>
+                    <input type="text" name="parent_name" class="form-control" placeholder="Father/Mother/Guardian name">
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Parent/Guardian Phone <span class="text-danger">*</span></label>
+                <input type="tel" name="parent_phone" class="form-control" placeholder="10-digit phone number" minlength="10">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Address</label>
+                <textarea name="address" class="form-control" rows="2" placeholder="Full address (optional)"></textarea>
+            </div>
+        </div>
+
+        <!-- Approval Process Note (updates with role) -->
+        <div id="approvalNote" style="margin-bottom: 1rem; padding: 0.65rem 0.85rem; background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); border-radius: 8px;">
+            <small style="color: rgba(255,255,255,0.6); font-size: 0.78rem;">
+                <i class="fas fa-shield-alt" style="color: #3b82f6;"></i>
+                <span id="approvalText">Select a role to see the approval process.</span>
+            </small>
+        </div>
+
+        <!-- Submit -->
+        <button type="submit" class="btn btn-primary" id="registerBtn">
+            <i class="fas fa-paper-plane"></i> Submit Registration
+        </button>
+    </form>
+
+    <!-- Login Link -->
+    <div class="text-center mt-3">
+        <p style="color: rgba(255,255,255,0.5); font-size: 0.875rem; margin: 0;">
+            Already have an account? <a href="{{ url_for('auth.login') }}" style="color: #3b82f6; font-weight: 600;">Sign in here</a>
+        </p>
+    </div>
+</div>
+
+<script>
+function toggleRoleFields() {
+    const role = document.getElementById('roleSelect').value;
+    const approvalText = document.getElementById('approvalText');
+    
+    // Hide all role-specific sections
+    document.getElementById('adminFields').style.display = 'none';
+    document.getElementById('facultyFields').style.display = 'none';
+    document.getElementById('studentFields').style.display = 'none';
+    
+    // Disable all hidden required inputs so they don't block form submission
+    document.querySelectorAll('#adminFields input, #adminFields select').forEach(el => el.removeAttribute('required'));
+    document.querySelectorAll('#facultyFields input, #facultyFields select').forEach(el => el.removeAttribute('required'));
+    document.querySelectorAll('#studentFields input, #studentFields select').forEach(el => el.removeAttribute('required'));
+    
+    // Show the selected role section and enable its required fields
+    if (role === 'admin') {
+        document.getElementById('adminFields').style.display = 'block';
+        document.querySelector('#adminFields input[name="college_name"]').setAttribute('required', '');
+        document.querySelector('#adminFields input[name="college_location"]').setAttribute('required', '');
+        document.querySelector('#adminFields input[name="admin_designation"]').setAttribute('required', '');
+        approvalText.textContent = 'Register a new college. You will be auto-approved as the administrator and receive a unique college code.';
+    } else if (role === 'faculty') {
+        document.getElementById('facultyFields').style.display = 'block';
+        document.querySelector('#facultyFields input[name="college_code"]').setAttribute('required', '');
+        document.querySelector('#facultyFields select[name="department"]').setAttribute('required', '');
+        document.querySelector('#facultyFields input[name="employee_id"]').setAttribute('required', '');
+        document.querySelector('#facultyFields input[name="years_of_experience"]').setAttribute('required', '');
+        document.querySelector('#facultyFields input[name="designation"]').setAttribute('required', '');
+        document.querySelector('#facultyFields input[name="qualification"]').setAttribute('required', '');
+        approvalText.textContent = 'Faculty accounts require approval from the college administrator.';
+    } else if (role === 'student') {
+        document.getElementById('studentFields').style.display = 'block';
+        document.querySelector('#studentFields input[name="college_code"]').setAttribute('required', '');
+        document.querySelector('#studentFields select[name="department"]').setAttribute('required', '');
+        document.querySelector('#studentFields input[name="roll_number"]').setAttribute('required', '');
+        document.querySelector('#studentFields input[name="semester"]').setAttribute('required', '');
+        document.querySelector('#studentFields input[name="admission_year"]').setAttribute('required', '');
+        document.querySelector('#studentFields input[name="graduation_year"]').setAttribute('required', '');
+        document.querySelector('#studentFields input[name="programme"]').setAttribute('required', '');
+        document.querySelector('#studentFields input[name="parent_name"]').setAttribute('required', '');
+        document.querySelector('#studentFields input[name="parent_phone"]').setAttribute('required', '');
+        approvalText.textContent = 'Student accounts require approval from your department faculty.';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('publicRegisterForm');
+    const password = document.getElementById('password');
+    const confirmPassword = document.getElementById('confirm_password');
+    const strengthFill = document.getElementById('strengthFill');
+    const strengthText = document.getElementById('strengthText');
+    const roleSelect = document.getElementById('roleSelect');
+
+    // Password Strength Indicator
+    password.addEventListener('input', function() {
+        const val = this.value;
+        let score = 0;
+        if (val.length >= 8) score++;
+        if (val.length >= 10) score++;
+        if (/[A-Z]/.test(val)) score++;
+        if (/[0-9]/.test(val)) score++;
+        if (/[^A-Za-z0-9]/.test(val)) score++;
+
+        const colors = ['#ef4444', '#f59e0b', '#f59e0b', '#10b981', '#10b981'];
+        const labels = ['Weak', 'Fair', 'Fair', 'Strong', 'Very Strong'];
+        const widths = ['20%', '40%', '60%', '80%', '100%'];
+
+        if (val.length === 0) {
+            strengthFill.style.width = '0';
+            strengthText.textContent = '';
+        } else {
+            const idx = Math.max(0, score - 1);
+            strengthFill.style.width = widths[idx];
+            strengthFill.style.background = colors[idx];
+            strengthText.style.color = colors[idx];
+            strengthText.textContent = labels[idx];
+        }
+    });
+
+    // Client-side Validation and disable hidden inputs
+    form.addEventListener('submit', function(e) {
+        let errors = [];
+        const fullName = document.getElementById('full_name').value.trim();
+        const username = document.getElementById('username').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const phone = document.getElementById('phone').value.trim();
+        const pw = password.value;
+        const cpw = confirmPassword.value;
+        const role = roleSelect.value;
+
+        if (fullName.length < 2) errors.push('Full name is required.');
+        if (username.length < 3) errors.push('Username must be at least 3 characters.');
+        if (!email || !email.includes('@')) errors.push('Please enter a valid email.');
+        if (phone.length < 10) errors.push('Please enter a valid phone number.');
+        if (pw.length < 8) errors.push('Password must be at least 8 characters.');
+        if (pw !== cpw) errors.push('Passwords do not match.');
+        if (!role) errors.push('Please select a role.');
+
+        if (errors.length > 0) {
+            e.preventDefault();
+            alert(errors.join('\n'));
+            return;
+        }
+
+        // Disable inputs in hidden sections so they don't submit and overwrite duplicate names
+        ['adminFields', 'facultyFields', 'studentFields'].forEach(id => {
+            const section = document.getElementById(id);
+            if (section.style.display === 'none') {
+                section.querySelectorAll('input, select, textarea').forEach(el => {
+                    el.disabled = true;
+                });
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

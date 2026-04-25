@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}Removal Requests — Smart College System{% endblock %}
+{% block page_title %}Student Removal Requests{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="page-header">
+    <h2><i class="fas fa-user-minus me-2" style="color: var(--accent);"></i>Student Removal Requests</h2>
+</div>
+
+<!-- Context Banner -->
+<div style="margin-bottom: 1rem; padding: 0.6rem 1rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.85rem; color: var(--text-secondary);">
+    {% if current_user.is_admin() %}
+        <i class="fas fa-shield-alt" style="color: var(--accent);"></i>
+        <strong>Admin View</strong> — Review and approve/reject faculty removal requests.
+        {% if pending_count > 0 %}
+        <span class="badge bg-warning text-dark ms-2">{{ pending_count }} pending</span>
+        {% endif %}
+    {% elif current_user.is_faculty() %}
+        <i class="fas fa-chalkboard-teacher" style="color: var(--success);"></i>
+        <strong>Faculty View</strong> — Submit and track your student removal requests.
+    {% endif %}
+</div>
+
+<!-- Filter Tabs -->
+<div class="filter-bar" style="gap: 0.5rem; padding: 0.5rem;">
+    <a href="{{ url_for('removal.list_requests', status='all') }}"
+       class="btn btn-sm {% if status_filter == 'all' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+        <i class="fas fa-list"></i> All
+    </a>
+    <a href="{{ url_for('removal.list_requests', status='pending') }}"
+       class="btn btn-sm {% if status_filter == 'pending' %}btn-warning{% else %}btn-outline-warning{% endif %}"
+       style="{% if status_filter != 'pending' %}color: #f59e0b; border-color: #f59e0b;{% endif %}">
+        <i class="fas fa-clock"></i> Pending
+        {% if pending_count > 0 %}<span class="badge bg-dark ms-1">{{ pending_count }}</span>{% endif %}
+    </a>
+    <a href="{{ url_for('removal.list_requests', status='approved') }}"
+       class="btn btn-sm {% if status_filter == 'approved' %}btn-success{% else %}btn-outline-success{% endif %}"
+       style="{% if status_filter != 'approved' %}color: #10b981; border-color: #10b981;{% endif %}">
+        <i class="fas fa-check-circle"></i> Approved
+    </a>
+    <a href="{{ url_for('removal.list_requests', status='rejected') }}"
+       class="btn btn-sm {% if status_filter == 'rejected' %}btn-danger{% else %}btn-outline-danger{% endif %}"
+       style="{% if status_filter != 'rejected' %}color: #ef4444; border-color: #ef4444;{% endif %}">
+        <i class="fas fa-times-circle"></i> Rejected
+    </a>
+</div>
+
+<!-- Requests Table -->
+<div class="table-container">
+    <div class="table-responsive">
+        <table class="table" id="removalTable">
+            <thead>
+                <tr>
+                    <th>Student</th>
+                    <th>Roll No</th>
+                    <th>Department</th>
+                    <th>Requested By</th>
+                    <th>Reason</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>Admin Response</th>
+                    <th style="min-width: 200px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if requests %}
+                    {% for req in requests %}
+                    <tr>
+                        <td style="font-weight: 600;">{{ req.student_name }}</td>
+                        <td><code style="background: rgba(59,130,246,0.1); color: #3b82f6; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.8rem;">{{ req.student_roll_number }}</code></td>
+                        <td>{{ req.student_department }}</td>
+                        <td>
+                            {% if req.requester %}
+                            {{ req.requester.full_name or req.requester.username }}
+                            {% else %}
+                            <span style="color: var(--text-muted);">Unknown</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span title="{{ req.reason }}" style="cursor: help;">
+                                {{ req.reason[:50] }}{% if req.reason|length > 50 %}...{% endif %}
+                            </span>
+                        </td>
+                        <td><small>{{ req.created_at.strftime('%d %b %Y') }}</small></td>
+                        <td>
+                            {% if req.status == 'pending' %}
+                                <span class="badge-status" style="background: #fef3c7; color: #92400e;">
+                                    <i class="fas fa-clock"></i> Pending
+                                </span>
+                            {% elif req.status == 'approved' %}
+                                <span class="badge-status" style="background: #d1fae5; color: #065f46;">
+                                    <i class="fas fa-check-circle"></i> Approved
+                                </span>
+                            {% elif req.status == 'rejected' %}
+                                <span class="badge-status" style="background: #fee2e2; color: #991b1b;">
+                                    <i class="fas fa-times-circle"></i> Rejected
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if req.admin_remarks %}
+                            <small style="color: var(--text-secondary);">{{ req.admin_remarks[:40] }}{% if req.admin_remarks|length > 40 %}...{% endif %}</small>
+                            {% else %}
+                            <small style="color: var(--text-muted);">—</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <!-- View Details -->
+                            <a href="{{ url_for('removal.view_request', request_id=req.id) }}" class="btn btn-sm btn-outline-primary" style="font-size: 0.75rem;">
+                                <i class="fas fa-eye"></i> Details
+                            </a>
+
+                            {% if current_user.is_admin() and req.status == 'pending' %}
+                                <!-- Admin: Approve -->
+                                <form method="POST" action="{{ url_for('removal.approve_request', request_id=req.id) }}" style="display:inline;">
+                                    <input type="hidden" name="admin_remarks" value="">
+                                    <button type="submit" class="btn btn-sm btn-success" style="font-size: 0.75rem;"
+                                            onclick="return confirm('Approve this removal request?')">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                </form>
+                                <!-- Admin: Reject (toggle) -->
+                                <button type="button" class="btn btn-sm btn-danger" style="font-size: 0.75rem;"
+                                        onclick="toggleRejectForm({{ req.id }})">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                                <div id="rejectForm-{{ req.id }}" style="display: none; margin-top: 0.5rem;">
+                                    <form method="POST" action="{{ url_for('removal.reject_request', request_id=req.id) }}">
+                                        <div class="input-group input-group-sm">
+                                            <input type="text" name="admin_remarks" class="form-control" placeholder="Reason for rejection (required)" style="font-size: 0.78rem;" required minlength="5">
+                                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Reject this request?')">
+                                                <i class="fas fa-paper-plane"></i>
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="10" class="text-center" style="padding: 3rem; color: var(--text-muted);">
+                            <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 0.75rem; display: block; opacity: 0.4;"></i>
+                            No {{ status_filter }} removal requests found.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+function toggleRejectForm(reqId) {
+    const el = document.getElementById('rejectForm-' + reqId);
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+</script>
+{% endblock %}
