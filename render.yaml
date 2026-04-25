@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: smart-college-system
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn app:app"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: SECRET_KEY
+        generateValue: true
+    disk:
+      name: sqlite-data
+      mountPath: /opt/render/project/src/instance
+      sizeGB: 1
