@@ -161,11 +161,22 @@ def create_app():
         </html>
         """, 500
 
-    # Create database tables
+    # Create database tables and auto-seed if empty
     with app.app_context():
         db.create_all()
         # Create saved_models directory if it doesn't exist
         os.makedirs(os.path.join(app.root_path, 'ml', 'saved_models'), exist_ok=True)
+        
+        # Auto-seed if database is empty (first run on Vercel)
+        from models.user import User
+        if not User.query.filter_by(username='admin').first():
+            try:
+                print("Database is empty. Running auto-seed...")
+                from seed_data import seed
+                seed()
+                print("Auto-seed complete.")
+            except Exception as e:
+                print(f"Auto-seed failed: {e}")
 
     return app
 
